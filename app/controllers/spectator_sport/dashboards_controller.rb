@@ -1,8 +1,18 @@
 module SpectatorSport
   class DashboardsController < ApplicationController
     def index
-      page_id = Event.last&.page_id
-      @events = Event.where(page_id: page_id).order(:created_at)
+      @session_windows = SessionWindow.order(:created_at).limit(50).reverse_order
+    end
+
+    def show
+      @session_window = SessionWindow.find(params[:id])
+    end
+
+    def destroy
+      @session_window = SessionWindow.find(params[:id])
+      @session_window.events.delete_all
+      @session_window.delete
+      redirect_to action: :index
     end
   end
 end

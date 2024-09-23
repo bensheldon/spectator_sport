@@ -14,8 +14,27 @@ ActiveRecord::Schema[7.2].define(version: 2024_09_23_140845) do
   create_table "spectator_sport_events", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.string "page_id", null: false
+    t.integer "session_id", null: false
+    t.integer "session_window_id"
     t.json "event_data", null: false
-    t.index ["page_id", "created_at"], name: "index_spectator_sport_events_on_page_id_and_created_at"
+    t.index [ "session_id", "created_at" ], name: "index_spectator_sport_events_on_session_id_and_created_at"
+    t.index [ "session_id" ], name: "index_spectator_sport_events_on_session_id"
+    t.index [ "session_window_id", "created_at" ], name: "idx_on_session_window_id_created_at_f1aab0a880"
+    t.index [ "session_window_id" ], name: "index_spectator_sport_events_on_session_window_id"
+  end
+
+  create_table "spectator_sport_session_windows", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "session_id", null: false
+    t.string "secure_id", null: false
+    t.index [ "session_id" ], name: "index_spectator_sport_session_windows_on_session_id"
+  end
+
+  create_table "spectator_sport_sessions", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "secure_id", null: false
+    t.index [ "secure_id", "created_at" ], name: "index_spectator_sport_sessions_on_secure_id_and_created_at"
   end
 end

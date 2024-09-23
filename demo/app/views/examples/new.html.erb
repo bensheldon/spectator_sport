@@ -1,0 +1,12 @@
+<%= form_with model: @resource, url: { action: :create }, action: :post do |f| %>
+  <%= f.label :name %>
+  <%= f.text_field :name %>
+
+  <br><br>
+  <%= f.label :message %>
+  <%= f.text_area :message %>
+
+  <br><br>
+
+  <%= f.submit "Submit" %>
+<% end %>

@@ -8,9 +8,26 @@ or you can use record.mirror to access the mirror instance during recording.`;le
 </script>
 
 <script>
-  const URL = 'spectator_sport/events';
-  // generate string of 40 random characters
-  const pageId = [...Array(40)].map(() => Math.random().toString(36)[2]).join('');
+  const POST_URL = '/spectator_sport/events';
+  const POST_INTERVAL_SECONDS = 2;
+
+  function generateRandomId() {
+    return [...Array(40)].map(() => Math.random().toString(36)[2]).join('');
+  }
+
+  const SESSION_ID_STORAGE_NAME = "spectator_sport_session_id";
+  let sessionId = window.localStorage.getItem("spectator_sport_session_id");
+  if (!sessionId) {
+    sessionId = generateRandomId();
+    window.localStorage.setItem(SESSION_ID_STORAGE_NAME, sessionId);
+  }
+
+  const WINDOW_ID_STORAGE_NAME = "spectator_sport_window_id";
+  let windowId = window.sessionStorage.getItem(WINDOW_ID_STORAGE_NAME);
+  if (!windowId) {
+    windowId = generateRandomId();
+    window.sessionStorage.setItem(WINDOW_ID_STORAGE_NAME, windowId);
+  }
 
   const events = [];
 
@@ -20,16 +37,15 @@ or you can use record.mirror to access the mirror instance during recording.`;le
     },
   });
 
-
   function postData() {
     if (events.length === 0) {
       return
     }
 
-    const body = JSON.stringify({pageId, events});
+    const body = JSON.stringify({sessionId, windowId, events});
     events.length = 0;
 
-    fetch(URL, {
+    fetch(POST_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -39,18 +55,19 @@ or you can use record.mirror to access the mirror instance during recording.`;le
     });
   }
 
-  setInterval(postData, 10 * 1000);
+  setInterval(postData, POST_INTERVAL_SECONDS * 1000);
 
   document.addEventListener("visibilitychange", function logData() {
+    console.log("visibilitychange", document.visibilityState, events.length);
     if (document.visibilityState === "hidden") {
-      if (events.length === 0) {
-        return
+      // Client has navigated away, so post the data
+      if (events.length > 0) {
+        postData();
       }
-
-      const body = JSON.stringify({pageId, events});
-      events.length = 0;
-
-      navigator.sendBeacon(URL, body)
+      // TODO: note that we have unloaded so that if the state is recovered from bf-cache, we know to reset the recorder
+    }
+    else if (document.visibilityState === "visible") {
+      // TODO: Detect if this is because of a back/forward event, which may be cached, so need to restart the recorder
     }
   });
 </script>
