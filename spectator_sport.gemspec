@@ -7,13 +7,13 @@ Gem::Specification.new do |spec|
   spec.description = "Description of SpectatorSport."
 
   spec.license     = "MIT"
-  spec.authors     = ["Ben Sheldon"]
-  spec.email       = ["bensheldon@gmail.com"]
+  spec.authors     = [ "Ben Sheldon" ]
+  spec.email       = [ "bensheldon@gmail.com" ]
   spec.homepage    = "https://github.com/bensheldon/spectator_sport"
   spec.metadata    = {
     "homepage_uri" => spec.homepage,
     "source_code_uri" => "https://github.com/bensheldon/spectator_sport",
-    "changelog_uri" => "https://github.com/bensheldon/spectator_sport/releases",
+    "changelog_uri" => "https://github.com/bensheldon/spectator_sport/releases"
   }
 
   spec.files = Dir[

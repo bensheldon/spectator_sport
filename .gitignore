@@ -3,8 +3,8 @@
 /log/*.log
 /pkg/
 /tmp/
-/test/dummy/db/*.sqlite3
-/test/dummy/db/*.sqlite3-*
-/test/dummy/log/*.log
-/test/dummy/storage/
-/test/dummy/tmp/
+/demo/db/*.sqlite3
+/demo/db/*.sqlite3-*
+/demo/log/*.log
+/demo/storage/
+/demo/tmp/
