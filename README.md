@@ -1,8 +1,12 @@
-# SpectatorSport
-Short description and motivation.
+# Spectator Sport
+
+Record and replay browser sessions in a self-hosted Rails Engine.
+
+Spectator Sport uses the [`rrweb` library](https://www.rrweb.io/) to create recordings of your website's DOM as your users interact with it. These recordings are stored in your database for replay by developers and administrators to analyze user behavior, reproduce bugs, and make building for the web more fun.
 
 ## Usage
-How to use my plugin.
+
+TBD.
 
 ## Installation
 Add this line to your application's Gemfile:
