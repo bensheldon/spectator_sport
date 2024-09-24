@@ -1,5 +1,8 @@
 SpectatorSport::Engine.routes.draw do
-  root to: "dashboards#index"
   resource :events, only: [ :create ]
+end
+
+SpectatorSport::Dashboard::Engine.routes.draw do
+  get "/", to: "dashboards#index"
   resources :dashboards, only: [ :show, :destroy ]
 end

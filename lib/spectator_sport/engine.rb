@@ -9,4 +9,10 @@ module SpectatorSport
       end
     end
   end
+
+  module Dashboard
+    class Engine < ::Rails::Engine
+      isolate_namespace SpectatorSport::Dashboard
+    end
+  end
 end
