@@ -29,15 +29,7 @@ or you can use record.mirror to access the mirror instance during recording.`;le
     window.sessionStorage.setItem(WINDOW_ID_STORAGE_NAME, windowId);
   }
 
-  const events = [];
-
-  let stopRecording = rrwebRecord({
-    emit(event) {
-      events.push(event);
-    },
-  });
-
-  function postData() {
+  function postData(sessionId, windowId, events) {
     if (events.length === 0) {
       return
     }
@@ -55,19 +47,38 @@ or you can use record.mirror to access the mirror instance during recording.`;le
     });
   }
 
-  setInterval(postData, POST_INTERVAL_SECONDS * 1000);
+  function startRecording(sessionId, windowId) {
+    const events = [];
+    const stopRecording = rrwebRecord({
+      emit(event) {
+        events.push(event);
+      },
+    });
+
+   const refreshInterval = setInterval(function() {
+      postData(sessionId, windowId, events);
+    }, POST_INTERVAL_SECONDS * 1000);
+
+    return function() {
+      clearInterval(refreshInterval);
+      stopRecording();
+      postData(sessionId, windowId, events);
+    }
+  }
+
+  let stopRecording = null;
+  stopRecording = startRecording(sessionId, windowId);
 
   document.addEventListener("visibilitychange", function logData() {
-    console.log("visibilitychange", document.visibilityState, events.length);
-    if (document.visibilityState === "hidden") {
-      // Client has navigated away, so post the data
-      if (events.length > 0) {
-        postData();
+    if (document.visibilityState === "visible") {
+      if (!stopRecording) {
+        stopRecording = startRecording(sessionId, windowId);
       }
-      // TODO: note that we have unloaded so that if the state is recovered from bf-cache, we know to reset the recorder
-    }
-    else if (document.visibilityState === "visible") {
-      // TODO: Detect if this is because of a back/forward event, which may be cached, so need to restart the recorder
+    } else if (document.visibilityState === "hidden") {
+      if (stopRecording) {
+        stopRecording();
+        stopRecording = null;
+      }
     }
   });
 </script>
