@@ -99,11 +99,13 @@ This repository is intended to be simple and easy to run locally with a fully-fe
 # 1. Clone this repository via git
 # 2. Set it up locally
 bundle install
-# 3. Run the demo Rails application:
+# 3. Create database
+bin/rails db:setup 
+# 4. Run the demo Rails application:
 bin/rails s
-# 4. Load the demo application in your browser
+# 5. Load the demo application in your browser
 open http://localhost:3000
-# 5. Make changes, see the result, commit and make a PR!
+# 6. Make changes, see the result, commit and make a PR!
 ```
 
 ## License
