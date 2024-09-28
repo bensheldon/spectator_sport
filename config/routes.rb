@@ -1,5 +1,5 @@
 SpectatorSport::Engine.routes.draw do
-  resource :events, only: [ :create ]
+  resources :events, only: [ :index, :create ]
 end
 
 SpectatorSport::Dashboard::Engine.routes.draw do

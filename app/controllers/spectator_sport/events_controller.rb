@@ -2,6 +2,9 @@ module SpectatorSport
   class EventsController < ApplicationController
     skip_before_action :verify_authenticity_token
 
+    def index
+    end
+
     def create
       data = if params.key?(:sessionId)&& params.key?(:windowId) && params.key?(:events)
                params.slice(:sessionId, :windowId, :events).stringify_keys
