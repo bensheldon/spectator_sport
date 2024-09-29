@@ -5,7 +5,14 @@
     <% @session_windows.each do |session_window| %>
       <li>
         <%= link_to "Session (##{session_window.session_id}) Window (##{session_window.id})", session_window_path(session_window.id) %>
+        <%= link_to "details", details_session_window_path(session_window.id) %>
         <%= button_to "X", session_window, method: :delete, form: { style: "display: inline-block" } %>
+        <br>
+        <% if session_window.analysis.tags.any? %>
+          tags:
+          <%= session_window.analysis.tags.join(", ") %>
+        <% end %>
+
       </li>
     <% end %>
   </ul>
