@@ -13,6 +13,7 @@ module SpectatorSport
   module Dashboard
     class Engine < ::Rails::Engine
       isolate_namespace SpectatorSport::Dashboard
+      paths.add "config/routes.rb", with: "config/dashboard_routes.rb"
     end
   end
 end
