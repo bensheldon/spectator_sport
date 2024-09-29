@@ -73,6 +73,30 @@ To install Spectator Sport in your Rails application:
     end
     ```
 
+   If you are using an authentication similar to the one used in ONCE products, you can use an auth constraint in your routes:
+   ```ruby
+   # config/routes.rb
+   class AuthRouteConstraint
+     def matches?(request)
+       return false unless request.session[:user_id]
+       user = User.find request.session[:user_id]
+    
+       if user && user.admin?
+         cookies = ActionDispatch::Cookies::CookieJar.build(request, request.cookies)
+         token = cookies.signed[:session_token]
+    
+         return user.sessions.find_by(token: token)
+       end
+     end
+   end
+
+   Rails.application.routes.draw do
+   
+   namespace :admin, :constraints => AuthRouteConstraint.new do
+      mount SpectatorSport::Dashboard::Engine, at: 'spectator_sport_dashboard', as: :spectator_sport_dashboard
+   end
+   ```
+
     Or extend the `SpectatorSport::Dashboard::ApplicationController` with your own authorization logic:
     ```ruby
     # config/initializers/good_job.rb
