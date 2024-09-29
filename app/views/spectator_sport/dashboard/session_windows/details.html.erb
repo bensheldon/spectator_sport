@@ -14,7 +14,7 @@ Tags:
 <h1> Events </h1>
 <% @session_window.events.each do |event| %>
   <p style="margin-bottom: 1rem;">
-    <strong> <%= event.explanation.title %> </strong><br>
+    <strong> <%= event.explanation.title %> </strong>(#<%= event.id %>)<br>
     <em> <%= event.explanation.details.join(", ") %> </em><br>
     <em> at <%= event.created_at.to_fs(:datetime) %> </em>
 
