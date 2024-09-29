@@ -10,7 +10,7 @@ module SpectatorSport
         @session_window.events.delete_all
         @session_window.delete
 
-        redirect_to "/spectator_sport_dashboard"
+        redirect_to root_path
       end
     end
   end
