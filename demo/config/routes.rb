@@ -4,5 +4,9 @@ Rails.application.routes.draw do
 
   root to: "examples#index"
 
-  resources :examples, only: [ :index, :show, :new, :create ]
+  resources :examples, only: [ :index, :show, :new, :create ] do
+    collection do
+      get :error
+    end
+  end
 end

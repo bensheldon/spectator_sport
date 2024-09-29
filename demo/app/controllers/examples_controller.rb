@@ -19,4 +19,9 @@ class ExamplesController < ApplicationController
       ActiveModel::Name.new(self, nil, "Resource")
     end
   end
+
+  # This enpoints serves for testing behavior when error page is encountered
+  def error
+    redirect_to "/500.html"
+  end
 end
