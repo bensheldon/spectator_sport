@@ -4,5 +4,6 @@ end
 
 SpectatorSport::Dashboard::Engine.routes.draw do
   get "/", to: "dashboards#index"
-  resources :dashboards, only: [ :show, :destroy ]
+  # resources :dashboards, only: [ :show, :destroy ]
+  resources :session_windows, only: [ :show, :destroy ]
 end
