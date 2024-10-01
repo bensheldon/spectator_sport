@@ -55,63 +55,72 @@ To install Spectator Sport in your Rails application:
           <script defer src="/spectator_sport/events.js"></script>
         </head>
         ```
-3. You must manually install and set up authorization for the Player Dashboard. You probably shouldn't make it public. If you are using Devise, authorizing admins might look like this:
+  3. To view recordings, you will want to mount the Player Dashboard in your application and set up authorization to limit access. See the section on [Dashboard authorization](#dashboard-authorization) for instructions.
 
-    ```ruby
-    # config/routes.rb
-    authenticate :user, ->(user) { user.admin? } do
-      mount SpectatorSport::Dashboard::Engine, at: 'spectator_sport_dashboard', as: :spectator_sport_dashboard
+## Dashboard authorization
+
+It is advisable to manually install and set up authorization for the **Player Dashboard** and refrain from making it public. 
+
+If you are using Devise, the process of authorizing admins might resemble the following:
+
+```ruby
+# config/routes.rb
+authenticate :user, ->(user) { user.admin? } do
+  mount SpectatorSport::Dashboard::Engine, at: 'spectator_sport_dashboard', as: :spectator_sport_dashboard
+end
+```
+
+Or set up Basic Auth:
+
+```ruby
+# config/initializers/spectator_sport.rb
+SpectatorSport::Dashboard::Engine.middleware.use(Rack::Auth::Basic) do |username, password|
+  ActiveSupport::SecurityUtils.secure_compare(Rails.application.credentials.spectator_sport_username, username) &
+  ActiveSupport::SecurityUtils.secure_compare(Rails.application.credentials.spectator_sport_password, password)
+end
+```
+
+If you are using an authentication method similar to the one used in ONCE products, you can utilize an auth constraint in your routes.
+```ruby
+# config/routes.rb
+class AuthRouteConstraint
+  def matches?(request)
+    return false unless request.session[:user_id]
+    user = User.find(request.session[:user_id])
+ 
+    if user && user.admin?
+      cookies = ActionDispatch::Cookies::CookieJar.build(request, request.cookies)
+      token = cookies.signed[:session_token]
+ 
+      return user.sessions.find_by(token: token)
     end
-    ```
+  end
+end
 
-    Or set up Basic Auth:
-    ```ruby
-    # config/initializers/spectator_sport.rb
-    SpectatorSport::Dashboard::Engine.middleware.use(Rack::Auth::Basic) do |username, password|
-      ActiveSupport::SecurityUtils.secure_compare(Rails.application.credentials.spectator_sport_username, username) &
-      ActiveSupport::SecurityUtils.secure_compare(Rails.application.credentials.spectator_sport_password, password)
-    end
-    ```
+Rails.application.routes.draw do
+  # ...
+  namespace :admin, constraints: AuthRouteConstraint.new do
+    mount SpectatorSport::Dashboard::Engine, at: 'spectator_sport_dashboard', as: :spectator_sport_dashboard
+  end
+end
+```
 
-   If you are using an authentication similar to the one used in ONCE products, you can use an auth constraint in your routes:
-   ```ruby
-   # config/routes.rb
-   class AuthRouteConstraint
-     def matches?(request)
-       return false unless request.session[:user_id]
-       user = User.find request.session[:user_id]
-    
-       if user && user.admin?
-         cookies = ActionDispatch::Cookies::CookieJar.build(request, request.cookies)
-         token = cookies.signed[:session_token]
-    
-         return user.sessions.find_by(token: token)
-       end
-     end
-   end
+Or extend the `SpectatorSport::Dashboard::ApplicationController` with your own authorization logic:
 
-   Rails.application.routes.draw do
-   
-   namespace :admin, :constraints => AuthRouteConstraint.new do
-      mount SpectatorSport::Dashboard::Engine, at: 'spectator_sport_dashboard', as: :spectator_sport_dashboard
-   end
-   ```
+```ruby
+# config/initializers/spectator_sport.rb
+ActiveSupport.on_load(:spectator_sport_dashboard_application_controller) do
+  # context here is SpectatorSport::Dashboard::ApplicationController
 
-    Or extend the `SpectatorSport::Dashboard::ApplicationController` with your own authorization logic:
-    ```ruby
-    # config/initializers/good_job.rb
-    ActiveSupport.on_load(:spectator_sport_dashboard_application_controller) do
-      # context here is SpectatorSport::Dashboard::ApplicationController
+  before_action do
+    raise ActionController::RoutingError.new('Not Found') unless current_user&.admin?
+  end
 
-      before_action do
-        raise ActionController::RoutingError.new('Not Found') unless current_user&.admin?
-      end
-
-      def current_user
-        # load current user from session, cookies, etc.
-      end
-     end
-     ```
+  def current_user
+    # load current user from session, cookies, etc.
+  end
+end
+```
 
 ## Contributing
 
