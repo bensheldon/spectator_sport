@@ -55,11 +55,14 @@ To install Spectator Sport in your Rails application:
           <script defer src="/spectator_sport/events.js"></script>
         </head>
         ```
+  3. To view recordings, you will want to mount the Player Dashboard in your application and set up authorization to limit access. See the section on [Dashboard authorization](#dashboard-authorization) for instructions.
 
-## Authorization
+## Dashboard authorization
+
 It is advisable to manually install and set up authorization for the **Player Dashboard** and refrain from making it public. 
 
 If you are using Devise, the process of authorizing admins might resemble the following:
+
 ```ruby
 # config/routes.rb
 authenticate :user, ->(user) { user.admin? } do
@@ -68,6 +71,7 @@ end
 ```
 
 Or set up Basic Auth:
+
 ```ruby
 # config/initializers/spectator_sport.rb
 SpectatorSport::Dashboard::Engine.middleware.use(Rack::Auth::Basic) do |username, password|
@@ -82,7 +86,7 @@ If you are using an authentication method similar to the one used in ONCE produc
 class AuthRouteConstraint
   def matches?(request)
     return false unless request.session[:user_id]
-    user = User.find request.session[:user_id]
+    user = User.find(request.session[:user_id])
  
     if user && user.admin?
       cookies = ActionDispatch::Cookies::CookieJar.build(request, request.cookies)
@@ -94,15 +98,17 @@ class AuthRouteConstraint
 end
 
 Rails.application.routes.draw do
-
-namespace :admin, :constraints => AuthRouteConstraint.new do
-   mount SpectatorSport::Dashboard::Engine, at: 'spectator_sport_dashboard', as: :spectator_sport_dashboard
+  # ...
+  namespace :admin, constraints: AuthRouteConstraint.new do
+    mount SpectatorSport::Dashboard::Engine, at: 'spectator_sport_dashboard', as: :spectator_sport_dashboard
+  end
 end
 ```
 
 Or extend the `SpectatorSport::Dashboard::ApplicationController` with your own authorization logic:
+
 ```ruby
-# config/initializers/good_job.rb
+# config/initializers/spectator_sport.rb
 ActiveSupport.on_load(:spectator_sport_dashboard_application_controller) do
   # context here is SpectatorSport::Dashboard::ApplicationController
 
@@ -115,7 +121,6 @@ ActiveSupport.on_load(:spectator_sport_dashboard_application_controller) do
   end
 end
 ```
-
 
 ## Contributing
 
