@@ -33,7 +33,7 @@ production:
 
 demo:
   adapter: postgresql
-  database: "good_job_demo"
+  database: "spectator_sport_demo"
   encoding: unicode
   pool: 50
   url: <%= ENV['DATABASE_URL'] %>

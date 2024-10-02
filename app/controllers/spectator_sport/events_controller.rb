@@ -21,7 +21,7 @@ module SpectatorSport
       window = SessionWindow.find_or_create_by(secure_id: window_secure_id, session: session)
 
       records_data = events.map do |event|
-        { session_id: session.id, session_window_id: window.id, event_data: event, created_at: Time.at(event["timestamp"] / 1000.0) }
+        { session_id: session.id, session_window_id: window.id, event_data: event, created_at: Time.at(event["timestamp"].to_f / 1000.0) }
       end.to_a
 
       Event.insert_all(records_data)
