@@ -13,92 +13,123 @@ function generateRandomId() {
   return [...Array(40)].map(() => Math.random().toString(36)[2]).join('');
 }
 
-const POST_PATH = '/spectator_sport/events';
-const POST_URL = window.location.origin + POST_PATH;
-const POST_INTERVAL_SECONDS = 15;
+const POST_URL = new URL("./events", window.location).href;
+const POST_INTERVAL_SECONDS = 5;
 const KEEPALIVE_BYTE_LIMIT = 60000; // Fetch payloads >64kb cannot use keepalive: true
 
-const SESSION_ID_STORAGE_NAME = "spectator_sport_session_id";
-let sessionId = window.localStorage.getItem("spectator_sport_session_id");
-if (!sessionId) {
-  sessionId = generateRandomId();
-  window.localStorage.setItem(SESSION_ID_STORAGE_NAME, sessionId);
-}
+class Recorder {
+  constructor() {
+    this.sessionId = this.getSessionId();
+    this.windowId = this.getWindowId();
 
-const WINDOW_ID_STORAGE_NAME = "spectator_sport_window_id";
-let windowId = window.sessionStorage.getItem(WINDOW_ID_STORAGE_NAME);
-if (!windowId) {
-  windowId = generateRandomId();
-  window.sessionStorage.setItem(WINDOW_ID_STORAGE_NAME, windowId);
-}
+    // Store events from rrweb
+    this.events = [];
+    this.eventBytes = 0;
 
-function postData(sessionId, windowId, events, keepalive = true) {
-  if (events.length === 0) {
-    return
+    this.stopRrwebCallback = null; // rrweb's stop function
+    this.refreshIntervalId = null; // interval id to cancel
   }
 
-  const body = JSON.stringify({sessionId, windowId, events: events });
+  start() {
+    if (this.isActive()) {
+      return;
+    }
 
-  fetch(POST_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    keepalive: keepalive,
-    body,
-  }).catch((error) => {
-    console.error(error);
-  });
-}
+    this.stopRrwebCallback = rrwebRecord({
+      emit: (event) => {
+        const serializedEvent = JSON.stringify(event);
+        const newEventBytes = lengthInUtf8Bytes(serializedEvent);
 
-function startRecording(sessionId, windowId) {
-  const events = [];
-  let eventBytes = 0;
-
-  const stopRrwebRecording = rrwebRecord({
-    emit(event) {
-      const serializedEvent = JSON.stringify(event);
-      const newEventBytes = lengthInUtf8Bytes(serializedEvent);
-
-      if (eventBytes + newEventBytes > KEEPALIVE_BYTE_LIMIT) {
-        events.push(event);
-        postData(sessionId, windowId, events, false);
-        events.length = 0;
-        eventBytes = 0;
-      } else {
-        events.push(event);
-        eventBytes = eventBytes + newEventBytes;
+        if (this.eventBytes + newEventBytes > KEEPALIVE_BYTE_LIMIT) {
+          this.events.push(event);
+          this.postData(false);
+          this.events.length = 0;
+          this.eventBytes = 0;
+        } else {
+          this.events.push(event);
+          this.eventBytes = this.eventBytes + newEventBytes;
+        }
       }
-    },
-  });
+    });
 
-  const refreshInterval = setInterval(function () {
-    postData(sessionId, windowId, events, true);
-    events.length = 0;
-    eventBytes = 0;
-  }, POST_INTERVAL_SECONDS * 1000);
+    this.refreshIntervalId = setInterval(() => {
+      this.postData();
+      this.events.length = 0;
+      this.eventBytes = 0;
+    }, POST_INTERVAL_SECONDS * 1000);
+  }
 
-  return function () {
-    clearInterval(refreshInterval);
-    stopRrwebRecording();
-    postData(sessionId, windowId, events, true);
-    events.length = 0;
-    eventBytes = 0;
+  stop() {
+    if (!this.isActive()) {
+      return;
+    }
+
+    clearInterval(this.refreshIntervalId);
+    this.stopRrwebCallback();
+    this.postData(true);
+    this.events.length = 0;
+    this.eventBytes = 0;
+  }
+
+  isActive() {
+    return this.stopRrwebCallback !== null;
+  }
+
+  postData(keepalive = true) {
+    if (this.events.length === 0) {
+      return
+    }
+
+    const body = JSON.stringify({
+      sessionId: this.sessionId,
+      windowId: this.windowId,
+      events: this.events
+    });
+
+    fetch(POST_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      keepalive: keepalive,
+      body,
+    }).catch((error) => {
+      console.error(error);
+    });
+  }
+
+  getWindowId() {
+    const WINDOW_ID_STORAGE_NAME = "spectator_sport_window_id";
+    let windowId = window.sessionStorage.getItem(WINDOW_ID_STORAGE_NAME);
+    if (!windowId) {
+      windowId = generateRandomId();
+      window.sessionStorage.setItem(WINDOW_ID_STORAGE_NAME, windowId);
+    }
+    return windowId;
+  }
+
+  getSessionId() {
+    const SESSION_ID_STORAGE_NAME = "spectator_sport_session_id";
+    let sessionId = window.localStorage.getItem(SESSION_ID_STORAGE_NAME);
+    if (!sessionId) {
+      sessionId = generateRandomId();
+      window.localStorage.setItem(SESSION_ID_STORAGE_NAME, sessionId);
+    }
+    return sessionId;
   }
 }
 
-let stopRecording = null;
-stopRecording = startRecording(sessionId, windowId);
+const recorder = new Recorder();
+recorder.start();
 
-document.addEventListener("visibilitychange", function logData() {
+window.addEventListener("pagehide", function(_event) {
+  recorder.stop();
+});
+
+document.addEventListener("visibilitychange", function(_event) {
   if (document.visibilityState === "visible") {
-    if (!stopRecording) {
-      stopRecording = startRecording(sessionId, windowId);
-    }
+    recorder.start();
   } else if (document.visibilityState === "hidden") {
-    if (stopRecording) {
-      stopRecording();
-      stopRecording = null;
-    }
+    recorder.stop();
   }
 });
