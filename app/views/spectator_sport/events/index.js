@@ -14,60 +14,8 @@ function generateRandomId() {
 }
 
 const POST_URL = new URL("./events", document.currentScript.src).href;
-const POST_INTERVAL_SECONDS = 5;
+const POST_INTERVAL_SECONDS = 15;
 const KEEPALIVE_BYTE_LIMIT = 60000; // Fetch payloads >64kb cannot use keepalive: true
-
-class Events {
-  constructor(sessionId, windowId) {
-    this.sessionId = sessionId;
-    this.windowId = windowId;
-
-    this.events = [];
-    this.eventBytes = 0;
-  }
-
-  add(event) {
-    const serializedEvent = JSON.stringify(event);
-    const newEventBytes = lengthInUtf8Bytes(serializedEvent);
-
-    if (this.eventBytes + newEventBytes > KEEPALIVE_BYTE_LIMIT) {
-      this.events.push(event);
-      this.postData(false);
-      this.events.length = 0;
-      this.eventBytes = 0;
-    } else {
-      this.events.push(event);
-      this.eventBytes = this.eventBytes + newEventBytes;
-    }
-  }
-
-  flush(final = false) {
-    this.postData(final);
-  }
-
-  postData(keepalive = true) {
-    if (this.events.length === 0) {
-      return
-    }
-
-    const body = JSON.stringify({
-      sessionId: this.sessionId,
-      windowId: this.windowId,
-      events: this.events
-    });
-
-    fetch(POST_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      keepalive: keepalive,
-      body,
-    }).catch((error) => {
-      console.error(error);
-    });
-  }
-}
 
 class Recorder {
   constructor() {
@@ -81,32 +29,45 @@ class Recorder {
   }
 
   start() {
-    if (this.isActive()) {
-      return;
+    if (!this.stopRrwebCallback) {
+      this.stopRrwebCallback = rrwebRecord({
+        emit: this.events.add.bind(this.events),
+      });
     }
 
-    this.stopRrwebCallback = rrwebRecord({
-      emit: this.events.add.bind(this.events),
-    });
-
-    this.refreshIntervalId = setInterval(
-      this.events.flush.bind(this.events),
-      POST_INTERVAL_SECONDS * 1000
-    );
+    if (!this.refreshIntervalId) {
+      this.refreshIntervalId = setInterval(
+        this.events.transmit.bind(this.events),
+        POST_INTERVAL_SECONDS * 1000
+      );
+    }
   }
 
   stop() {
-    if (!this.isActive()) {
-      return;
+    if (this.refreshIntervalId) {
+      clearInterval(this.refreshIntervalId);
+      this.refreshIntervalId = null;
     }
 
-    clearInterval(this.refreshIntervalId);
-    this.stopRrwebCallback();
-    this.events.flush(true);
+    if (this.stopRrwebCallback) {
+      this.stopRrwebCallback();
+      this.stopRrwebCallback = null;
+    }
+
+    this.events.transmit(true);
   }
 
-  isActive() {
-    return this.stopRrwebCallback !== null;
+  pause() {
+    if (this.refreshIntervalId) {
+      clearInterval(this.refreshIntervalId);
+      this.refreshIntervalId = null;
+    }
+
+    this.events.transmit();
+  }
+
+  unpause() {
+    this.start();
   }
 
   getWindowId() {
@@ -130,8 +91,70 @@ class Recorder {
   }
 }
 
+class Events {
+  constructor(sessionId, windowId) {
+    this.sessionId = sessionId;
+    this.windowId = windowId;
+
+    this.events = [];
+    this.eventBytes = 0;
+  }
+
+  add(event) {
+    const serializedEvent = JSON.stringify(event);
+    const newEventBytes = lengthInUtf8Bytes(serializedEvent);
+
+    this.events.push(event);
+    this.eventBytes = this.eventBytes + newEventBytes;
+
+    if (this.eventBytes > KEEPALIVE_BYTE_LIMIT) {
+      this.events.push(event);
+      this.debouncedTransmit();
+    }
+  }
+
+  transmit(final = false) {
+    if (this.events.length === 0) {
+      return
+    }
+
+    const body = JSON.stringify({
+      sessionId: this.sessionId,
+      windowId: this.windowId,
+      events: this.events
+    });
+
+    this.events.length = 0;
+    this.eventBytes = 0;
+
+    fetch(POST_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      keepalive: !final,
+      body,
+    }).catch((error) => {
+      console.error(error);
+    });
+  }
+
+  debouncedTransmit() {
+    if (!this.debouncedTransmitTimeout) {
+      this.debouncedTransmitTimeout = setTimeout(function() {
+        this.transmit(false);
+      }.bind(this), 100);
+    }
+
+  }
+}
+
 const recorder = new Recorder();
 recorder.start();
+
+window.addEventListener("pageshow", function(_event) {
+  recorder.start();
+});
 
 window.addEventListener("pagehide", function(_event) {
   recorder.stop();
@@ -139,8 +162,8 @@ window.addEventListener("pagehide", function(_event) {
 
 document.addEventListener("visibilitychange", function(_event) {
   if (document.visibilityState === "visible") {
-    recorder.start();
+    recorder.unpause();
   } else if (document.visibilityState === "hidden") {
-    recorder.stop();
+    recorder.pause();
   }
 });
