@@ -13,66 +13,36 @@ function generateRandomId() {
   return [...Array(40)].map(() => Math.random().toString(36)[2]).join('');
 }
 
-const POST_URL = new URL("./events", window.location).href;
+const POST_URL = new URL("./events", document.currentScript.src).href;
 const POST_INTERVAL_SECONDS = 5;
 const KEEPALIVE_BYTE_LIMIT = 60000; // Fetch payloads >64kb cannot use keepalive: true
 
-class Recorder {
-  constructor() {
-    this.sessionId = this.getSessionId();
-    this.windowId = this.getWindowId();
+class Events {
+  constructor(sessionId, windowId) {
+    this.sessionId = sessionId;
+    this.windowId = windowId;
 
-    // Store events from rrweb
     this.events = [];
     this.eventBytes = 0;
-
-    this.stopRrwebCallback = null; // rrweb's stop function
-    this.refreshIntervalId = null; // interval id to cancel
   }
 
-  start() {
-    if (this.isActive()) {
-      return;
-    }
+  add(event) {
+    const serializedEvent = JSON.stringify(event);
+    const newEventBytes = lengthInUtf8Bytes(serializedEvent);
 
-    this.stopRrwebCallback = rrwebRecord({
-      emit: (event) => {
-        const serializedEvent = JSON.stringify(event);
-        const newEventBytes = lengthInUtf8Bytes(serializedEvent);
-
-        if (this.eventBytes + newEventBytes > KEEPALIVE_BYTE_LIMIT) {
-          this.events.push(event);
-          this.postData(false);
-          this.events.length = 0;
-          this.eventBytes = 0;
-        } else {
-          this.events.push(event);
-          this.eventBytes = this.eventBytes + newEventBytes;
-        }
-      }
-    });
-
-    this.refreshIntervalId = setInterval(() => {
-      this.postData();
+    if (this.eventBytes + newEventBytes > KEEPALIVE_BYTE_LIMIT) {
+      this.events.push(event);
+      this.postData(false);
       this.events.length = 0;
       this.eventBytes = 0;
-    }, POST_INTERVAL_SECONDS * 1000);
-  }
-
-  stop() {
-    if (!this.isActive()) {
-      return;
+    } else {
+      this.events.push(event);
+      this.eventBytes = this.eventBytes + newEventBytes;
     }
-
-    clearInterval(this.refreshIntervalId);
-    this.stopRrwebCallback();
-    this.postData(true);
-    this.events.length = 0;
-    this.eventBytes = 0;
   }
 
-  isActive() {
-    return this.stopRrwebCallback !== null;
+  flush(final = false) {
+    this.postData(final);
   }
 
   postData(keepalive = true) {
@@ -96,6 +66,47 @@ class Recorder {
     }).catch((error) => {
       console.error(error);
     });
+  }
+}
+
+class Recorder {
+  constructor() {
+    this.sessionId = this.getSessionId();
+    this.windowId = this.getWindowId();
+
+    this.events = new Events(this.sessionId, this.windowId);
+
+    this.stopRrwebCallback = null; // rrweb's stop function
+    this.refreshIntervalId = null; // interval id to cancel
+  }
+
+  start() {
+    if (this.isActive()) {
+      return;
+    }
+
+    this.stopRrwebCallback = rrwebRecord({
+      emit: this.events.add.bind(this.events),
+    });
+
+    this.refreshIntervalId = setInterval(
+      this.events.flush.bind(this.events),
+      POST_INTERVAL_SECONDS * 1000
+    );
+  }
+
+  stop() {
+    if (!this.isActive()) {
+      return;
+    }
+
+    clearInterval(this.refreshIntervalId);
+    this.stopRrwebCallback();
+    this.events.flush(true);
+  }
+
+  isActive() {
+    return this.stopRrwebCallback !== null;
   }
 
   getWindowId() {
