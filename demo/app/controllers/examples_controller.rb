@@ -1,4 +1,6 @@
 class ExamplesController < ApplicationController
+  ExampleError = Class.new(StandardError)
+
   def index
   end
 
@@ -22,6 +24,13 @@ class ExamplesController < ApplicationController
 
   # This enpoints serves for testing behavior when error page is encountered
   def error
-    redirect_to "/500.html"
+    request.env["action_dispatch.show_detailed_exceptions"] = false
+    raise ExampleError
+  end
+
+  private
+
+  def show_detailed_exceptions?
+    action_name == "error" ? false : super
   end
 end
