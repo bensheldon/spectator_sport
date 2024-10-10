@@ -13,6 +13,13 @@ function generateRandomId() {
   return [...Array(40)].map(() => Math.random().toString(36)[2]).join('');
 }
 
+const LOGS_ENABLED = false;
+function log(...args) {
+  if (LOGS_ENABLED) {
+    console.log(...args);
+  }
+}
+
 const POST_URL = new URL("./events", document.currentScript.src).href;
 const POST_INTERVAL_SECONDS = 15;
 const KEEPALIVE_BYTE_LIMIT = 60000; // Fetch payloads >64kb cannot use keepalive: true
@@ -36,9 +43,9 @@ class Recorder {
     }
 
     if (!this.refreshIntervalId) {
-      this.refreshIntervalId = setInterval(
-        this.events.transmit.bind(this.events),
-        POST_INTERVAL_SECONDS * 1000
+      this.refreshIntervalId = setInterval(function() {
+        this.events.transmit(false);
+    }.bind(this), POST_INTERVAL_SECONDS * 1000
       );
     }
   }
@@ -113,7 +120,7 @@ class Events {
     }
   }
 
-  transmit(final = false) {
+  transmit(keepalive = false) {
     if (this.events.length === 0) {
       return
     }
@@ -132,7 +139,7 @@ class Events {
       headers: {
         'Content-Type': 'application/json',
       },
-      keepalive: !final,
+      keepalive: keepalive,
       body,
     }).catch((error) => {
       console.error(error);
@@ -153,14 +160,17 @@ const recorder = new Recorder();
 recorder.start();
 
 window.addEventListener("pageshow", function(_event) {
+  log("pageshow");
   recorder.start();
 });
 
 window.addEventListener("pagehide", function(_event) {
+  log("pagehide");
   recorder.stop();
 });
 
 document.addEventListener("visibilitychange", function(_event) {
+  log("visibilitychange", document.visibilityState);
   if (document.visibilityState === "visible") {
     recorder.unpause();
   } else if (document.visibilityState === "hidden") {
