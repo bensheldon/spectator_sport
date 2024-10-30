@@ -1,14 +1,44 @@
-<h1>Spectator Sport</h1>
-<% if @session_windows.to_a.any? %>
-  <ul>
-
-    <% @session_windows.each do |session_window| %>
-      <li>
-        <%= link_to "Session (##{session_window.session_id}) Window (##{session_window.id})", session_window_path(session_window.id) %>
-        <%= button_to "X", session_window, method: :delete, form: { style: "display: inline-block" } %>
-      </li>
-    <% end %>
-  </ul>
-<% else %>
-  <em>No recordings found.</em>
-<% end %>
+<div class="container my-3">
+  <% if @session_windows.to_a.any? %>
+    <div class="card overflow-auto ">
+      <table class="table mb-0">
+        <caption class="visually-hidden">List of screen recordings</caption>
+        <thead>
+        <tr>
+          <th>Recording</th>
+          <th>Session ID</th>
+          <th>Updated</th>
+          <th>Created</th>
+          <th>Actions</th>
+        </tr>
+        </thead>
+        <tbody>
+        <% @session_windows.each do |session_window| %>
+          <tr>
+            <td><%= link_to "Session (Window ##{session_window.id})", session_window_path(session_window.id) %></td>
+            <td><%= session_window.session_id %></td>
+            <td><%= tag.time(time_ago_in_words(session_window.updated_at), datetime: session_window.updated_at, title: session_window.updated_at) %>
+            <td><%= tag.time(time_ago_in_words(session_window.created_at), datetime: session_window.created_at, title: session_window.created_at) %>
+            <td>
+              <button class="d-flex align-items-center btn btn-sm" type="button" id="<%= dom_id(session_window, :actions) %>" data-bs-toggle="dropdown" aria-expanded="false">
+                <%= render_icon "dots" %>
+                <span class="visually-hidden">Actions</span>
+              </button>
+              <ul class="dropdown-menu shadow" aria-labelledby="<%= dom_id(session_window, :actions) %>">
+                <li>
+                  <%= link_to session_window_path(session_window.id), method: :put, class: "dropdown-item", title: "Destroy", data: { "turbo-method": :delete, "turbo-confirm": "Destroy this recording?" } do %>
+                    <%= render_icon "eject" %>
+                    Destroy
+                  <% end %>
+                </li>
+              </ul>
+            </td>
+          </tr>
+        <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <em>No recordings found.</em>
+  <% end %>
+</div>
