@@ -17,7 +17,18 @@ module SpectatorSport
       window_secure_id = data["windowId"]
       events = data["events"]
 
-      session = Session.find_or_create_by(secure_id: session_secure_id)
+      spectator_session_params = {
+        remote_ip: request.remote_ip,
+        user_agent: request.user_agent
+      }
+      spectator_session_params[:referrer] = session["referrer"] if session.has_key?("referrer")
+      spectator_session_params[:landing_path] = session["landing_path"] if session.has_key?("landing_path")
+
+      session = Session.create_with(
+        spectator_session_params
+      ).find_or_create_by(
+        secure_id: session_secure_id
+      )
       window = SessionWindow.find_or_create_by(secure_id: window_secure_id, session: session)
 
       records_data = events.map do |event|

@@ -24,5 +24,5 @@ Gem::Specification.new do |spec|
     "LICENSE.txt",
   ]
 
-  spec.add_dependency "rails", ">= 7.2.1"
+  spec.add_dependency "rails", ">= 7.0.0"
 end
