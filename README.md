@@ -18,7 +18,7 @@ Spectator Sport uses the [`rrweb` library](https://www.rrweb.io/) to create reco
 - ◻️ Privacy controls with masked recording by default
 - ◻️ Automated installation process with Rails generators
 - ◻️ Fully documented installation process
-- ◻️ Release v1.0 🎉
+- 🏁 Release v1.0 🎉
 - ◻️ Live streaming replay of recordings
 - ◻️ Searching / filtering of recordings, including navigation and 404s/500s, button clicks, rage clicks, dead clicks, etc.
 - ◻️ Custom events
