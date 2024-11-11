@@ -35,6 +35,10 @@ ActiveRecord::Schema[7.2].define(version: 2024_09_23_140845) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "secure_id", null: false
+    t.string "user_agent"
+    t.string "referrer"
+    t.string "remote_ip"
+    t.string "landing_path"
     t.index [ "secure_id", "created_at" ], name: "index_spectator_sport_sessions_on_secure_id_and_created_at"
   end
 end

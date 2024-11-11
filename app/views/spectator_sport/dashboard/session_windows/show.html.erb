@@ -16,3 +16,41 @@
     player.$destroy();
   });
 </script>
+
+<div class="container mt-3">
+  <h3>Session Data</h3>
+  <table class="table mb-0">
+    </thead>
+    <tbody>
+      <tr>
+        <th>Created At</th>
+        <td><%= @session_window.session.created_at %></td>
+      </tr>
+      <tr>
+        <th>Created At</th>
+        <td><%= @session_window.session.created_at %></td>
+      </tr>
+      <tr>
+        <th>Secure ID</th>
+        <td><%= @session_window.session.secure_id %></td>
+      </tr>
+      <tr>
+        <th>User Agent</th>
+        <td><%= @session_window.session.user_agent %></td>
+      </tr>
+      <tr>
+        <th>Referrer</th>
+        <td><%= @session_window.session.referrer %></td>
+      </tr>
+      <tr>
+        <th>Remote IP</th>
+        <td><%= @session_window.session.remote_ip %></td>
+      </tr>
+      <tr>
+        <th>Landing Path</th>
+        <td><%= @session_window.session.landing_path %></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
