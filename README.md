@@ -58,14 +58,7 @@ To install Spectator Sport in your Rails application:
     - Optional: If you would like to capture referrer and landing path data, add this to your `ApplicationController`:
         ```rb
         class ApplicationController < ActionController::Base
-          before_action :store_referrer_and_path
-
-          private
-
-          def store_referrer_and_path
-            session["referrer"] ||= request.referrer.to_s
-            session["landing_path"] ||= request.path.to_s
-          end
+          include SpectatorSport::FanSessions
         end
         ```
 

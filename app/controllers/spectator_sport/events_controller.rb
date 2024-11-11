@@ -19,10 +19,10 @@ module SpectatorSport
 
       spectator_session_params = {
         remote_ip: request.remote_ip,
-        user_agent: request.user_agent
+        user_agent: request.user_agent,
+        referrer: session.dig(:spectator_sport, :referrer),
+        landing_path: session.dig(:spectator_sport, :landing_path)
       }
-      spectator_session_params[:referrer] = session["referrer"] if session.has_key?("referrer")
-      spectator_session_params[:landing_path] = session["landing_path"] if session.has_key?("landing_path")
 
       session = Session.create_with(
         spectator_session_params
