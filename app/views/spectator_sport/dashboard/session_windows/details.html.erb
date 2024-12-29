@@ -1,26 +1,25 @@
-<%= link_to "Back to dashboard", root_path %>
+<main class="container mt-3">
+  <h1> Overview </h1>
+  Visited pages:
+  <ul>
+    <% @session_window.analysis.visited_pages.each do |page| %>
+      <li><%= page %></li>
+    <% end %>
+  </ul>
+  Tags:
+  <%= @session_window.analysis.tags %>
 
-<h1> Overview </h1>
-Visited pages:
-<ul>
-  <% @session_window.analysis.visited_pages.each do |page| %>
-    <li><%= page %></li>
+  <h1> Events </h1>
+  <% @session_window.events.each do |event| %>
+    <p style="margin-bottom: 1rem;">
+      <strong> <%= event.explanation.title %> </strong>(#<%= event.id %>)<br>
+      <em> <%= event.explanation.details.join(", ") %> </em><br>
+      <em> at <%= event.created_at.to_fs(:datetime) %> </em>
+
+      <details open>
+        <summary> Complete data </summary>
+        <%= event.event_data %>
+      </details>
+    </p>
   <% end %>
-</ul>
-Tags:
-<%= @session_window.analysis.tags %>
-
-
-<h1> Events </h1>
-<% @session_window.events.each do |event| %>
-  <p style="margin-bottom: 1rem;">
-    <strong> <%= event.explanation.title %> </strong>(#<%= event.id %>)<br>
-    <em> <%= event.explanation.details.join(", ") %> </em><br>
-    <em> at <%= event.created_at.to_fs(:datetime) %> </em>
-
-    <details open>
-      <summary> Complete data </summary>
-      <%= event.event_data %>
-    </details>
-  </p>
-<% end %>
+</div>
