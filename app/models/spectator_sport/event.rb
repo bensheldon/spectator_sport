@@ -3,7 +3,7 @@ module SpectatorSport
     belongs_to :session
     belongs_to :session_window
 
-    Explanation = Struct.new(:title, :details)
+    Explanation = Struct.new(:title, :details, :custom_event)
 
     # taken from https://github.com/rrweb-io/rrweb/blob/9488deb6d54a5f04350c063d942da5e96ab74075/src/types.ts
     EVENT_TYPES = %w[DomContentLoaded Load FullSnapshot IncrementalSnapshot Meta Custom]
@@ -30,6 +30,8 @@ module SpectatorSport
         explanation.details << "#{mouse_interaction}"
       end
 
+      explanation.custom_event = custom_event
+
       explanation
     end
 
@@ -54,6 +56,15 @@ module SpectatorSport
 
     def page
       event_data.dig("data", "href")
+    end
+
+    def custom_event
+      Event.parse_custom_event(event_data)
+    end
+
+    def self.parse_custom_event(data)
+      pattern = /tagName"=>"meta", "attributes"=>{"name"=>"spectator_sport-event", "content"=>\"([a-z0-9]*)\"/
+      data.to_s.match(pattern)&.captures&.first
     end
   end
 end

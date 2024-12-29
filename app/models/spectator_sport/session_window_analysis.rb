@@ -12,5 +12,9 @@ module SpectatorSport
       tags = []
       tags
     end
+
+    def custom_events
+      @session_window.events.map { _1.explanation.custom_event }.compact.uniq
+    end
   end
 end

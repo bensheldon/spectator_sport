@@ -6,14 +6,28 @@
       <li><%= page %></li>
     <% end %>
   </ul>
-  Tags:
-  <%= @session_window.analysis.tags %>
+  <p>
+    Tags: <br>
+    <%= @session_window.analysis.tags %>
+  </p>
+
+  <p>
+    Custom events:<br>
+    <%= @session_window.analysis.custom_events.join(", ") %>
+  </p>
 
   <h1> Events </h1>
   <% @session_window.events.each do |event| %>
     <p style="margin-bottom: 1rem;">
       <strong> <%= event.explanation.title %> </strong>(#<%= event.id %>)<br>
-      <em> <%= event.explanation.details.join(", ") %> </em><br>
+
+      <% if event.explanation.details.present? %>
+        <em> <%= event.explanation.details.join(", ") %> </em><br>
+      <% end %>
+
+      <% if event.explanation.custom_event.present? %>
+        <em> custom event: <%= event.explanation.custom_event %> </em><br>
+      <% end %>
       <em> at <%= event.created_at.to_fs(:datetime) %> </em>
 
       <details open>
