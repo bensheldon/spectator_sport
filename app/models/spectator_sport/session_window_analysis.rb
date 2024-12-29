@@ -8,9 +8,8 @@ module SpectatorSport
       @session_window.events.map { _1.page }.compact
     end
 
-    def tags # simple naive implementation of tagging sessions
+    def tags # WIP simple naive implementation of tagging sessions
       tags = []
-      tags << "server_error" if visited_pages.any? { _1.include?("500.html") }
       tags
     end
   end
