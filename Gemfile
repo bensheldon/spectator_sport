@@ -1,5 +1,9 @@
 source "https://rubygems.org"
 
+if File.exist?(".ruby-version")
+  ruby file: ".ruby-version"
+end
+
 # Specify your gem's dependencies in spectator_sport.gemspec.
 gemspec
 

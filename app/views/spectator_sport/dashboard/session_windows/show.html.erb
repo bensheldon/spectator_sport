@@ -1,10 +1,18 @@
-<%= render "spectator_sport/shared/rrweb_player" %>
+<div class="container mt-3">
+  <div id="player" class="d-flex justify-content-center"></div>
+</div>
 
-<script>
-  new rrwebPlayer({
-    target: document.body, // customizable root element
+<script type="module">
+  import { Player } from  'rrweb-player';
+
+  const player = new Player({
+    target: document.getElementById('player'),
     props: {
       events: <%== @session_window.events.order(:created_at).map(&:event_data).to_json %>,
     },
+  });
+
+  document.addEventListener('turbo:before-visit', () => {
+    player.$destroy();
   });
 </script>

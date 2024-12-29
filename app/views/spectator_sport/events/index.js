@@ -13,92 +13,167 @@ function generateRandomId() {
   return [...Array(40)].map(() => Math.random().toString(36)[2]).join('');
 }
 
-const POST_PATH = '/spectator_sport/events';
-const POST_URL = window.location.origin + POST_PATH;
+const LOGS_ENABLED = false;
+function log(...args) {
+  if (LOGS_ENABLED) {
+    console.log(...args);
+  }
+}
+
+const POST_URL = new URL("./events", document.currentScript.src).href;
 const POST_INTERVAL_SECONDS = 15;
 const KEEPALIVE_BYTE_LIMIT = 60000; // Fetch payloads >64kb cannot use keepalive: true
 
-const SESSION_ID_STORAGE_NAME = "spectator_sport_session_id";
-let sessionId = window.localStorage.getItem("spectator_sport_session_id");
-if (!sessionId) {
-  sessionId = generateRandomId();
-  window.localStorage.setItem(SESSION_ID_STORAGE_NAME, sessionId);
-}
+class Recorder {
+  constructor() {
+    this.sessionId = this.getSessionId();
+    this.windowId = this.getWindowId();
 
-const WINDOW_ID_STORAGE_NAME = "spectator_sport_window_id";
-let windowId = window.sessionStorage.getItem(WINDOW_ID_STORAGE_NAME);
-if (!windowId) {
-  windowId = generateRandomId();
-  window.sessionStorage.setItem(WINDOW_ID_STORAGE_NAME, windowId);
-}
+    this.events = new Events(this.sessionId, this.windowId);
 
-function postData(sessionId, windowId, events, keepalive = true) {
-  if (events.length === 0) {
-    return
+    this.stopRrwebCallback = null; // rrweb's stop function
+    this.refreshIntervalId = null; // interval id to cancel
   }
 
-  const body = JSON.stringify({sessionId, windowId, events: events });
+  start() {
+    if (!this.stopRrwebCallback) {
+      this.stopRrwebCallback = rrwebRecord({
+        emit: this.events.add.bind(this.events),
+      });
+    }
 
-  fetch(POST_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    keepalive: keepalive,
-    body,
-  }).catch((error) => {
-    console.error(error);
-  });
-}
+    if (!this.refreshIntervalId) {
+      this.refreshIntervalId = setInterval(function() {
+        this.events.transmit(false);
+    }.bind(this), POST_INTERVAL_SECONDS * 1000
+      );
+    }
+  }
 
-function startRecording(sessionId, windowId) {
-  const events = [];
-  let eventBytes = 0;
+  stop() {
+    if (this.refreshIntervalId) {
+      clearInterval(this.refreshIntervalId);
+      this.refreshIntervalId = null;
+    }
 
-  const stopRrwebRecording = rrwebRecord({
-    emit(event) {
-      const serializedEvent = JSON.stringify(event);
-      const newEventBytes = lengthInUtf8Bytes(serializedEvent);
+    if (this.stopRrwebCallback) {
+      this.stopRrwebCallback();
+      this.stopRrwebCallback = null;
+    }
 
-      if (eventBytes + newEventBytes > KEEPALIVE_BYTE_LIMIT) {
-        events.push(event);
-        postData(sessionId, windowId, events, false);
-        events.length = 0;
-        eventBytes = 0;
-      } else {
-        events.push(event);
-        eventBytes = eventBytes + newEventBytes;
-      }
-    },
-  });
+    this.events.transmit(true);
+  }
 
-  const refreshInterval = setInterval(function () {
-    postData(sessionId, windowId, events, true);
-    events.length = 0;
-    eventBytes = 0;
-  }, POST_INTERVAL_SECONDS * 1000);
+  pause() {
+    if (this.refreshIntervalId) {
+      clearInterval(this.refreshIntervalId);
+      this.refreshIntervalId = null;
+    }
 
-  return function () {
-    clearInterval(refreshInterval);
-    stopRrwebRecording();
-    postData(sessionId, windowId, events, true);
-    events.length = 0;
-    eventBytes = 0;
+    this.events.transmit();
+  }
+
+  unpause() {
+    this.start();
+  }
+
+  getWindowId() {
+    const WINDOW_ID_STORAGE_NAME = "spectator_sport_window_id";
+    let windowId = window.sessionStorage.getItem(WINDOW_ID_STORAGE_NAME);
+    if (!windowId) {
+      windowId = generateRandomId();
+      window.sessionStorage.setItem(WINDOW_ID_STORAGE_NAME, windowId);
+    }
+    return windowId;
+  }
+
+  getSessionId() {
+    const SESSION_ID_STORAGE_NAME = "spectator_sport_session_id";
+    let sessionId = window.localStorage.getItem(SESSION_ID_STORAGE_NAME);
+    if (!sessionId) {
+      sessionId = generateRandomId();
+      window.localStorage.setItem(SESSION_ID_STORAGE_NAME, sessionId);
+    }
+    return sessionId;
   }
 }
 
-let stopRecording = null;
-stopRecording = startRecording(sessionId, windowId);
+class Events {
+  constructor(sessionId, windowId) {
+    this.sessionId = sessionId;
+    this.windowId = windowId;
 
-document.addEventListener("visibilitychange", function logData() {
+    this.events = [];
+    this.eventBytes = 0;
+  }
+
+  add(event) {
+    const serializedEvent = JSON.stringify(event);
+    const newEventBytes = lengthInUtf8Bytes(serializedEvent);
+
+    this.events.push(event);
+    this.eventBytes = this.eventBytes + newEventBytes;
+
+    if (this.eventBytes > KEEPALIVE_BYTE_LIMIT) {
+      this.events.push(event);
+      this.debouncedTransmit();
+    }
+  }
+
+  transmit(keepalive = false) {
+    if (this.events.length === 0) {
+      return
+    }
+
+    const body = JSON.stringify({
+      sessionId: this.sessionId,
+      windowId: this.windowId,
+      events: this.events
+    });
+
+    this.events.length = 0;
+    this.eventBytes = 0;
+
+    fetch(POST_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      keepalive: keepalive,
+      body,
+    }).catch((error) => {
+      console.error(error);
+    });
+  }
+
+  debouncedTransmit() {
+    if (!this.debouncedTransmitTimeout) {
+      this.debouncedTransmitTimeout = setTimeout(function() {
+        this.transmit(false);
+      }.bind(this), 100);
+    }
+
+  }
+}
+
+const recorder = new Recorder();
+recorder.start();
+
+window.addEventListener("pageshow", function(_event) {
+  log("pageshow");
+  recorder.start();
+});
+
+window.addEventListener("pagehide", function(_event) {
+  log("pagehide");
+  recorder.stop();
+});
+
+document.addEventListener("visibilitychange", function(_event) {
+  log("visibilitychange", document.visibilityState);
   if (document.visibilityState === "visible") {
-    if (!stopRecording) {
-      stopRecording = startRecording(sessionId, windowId);
-    }
+    recorder.unpause();
   } else if (document.visibilityState === "hidden") {
-    if (stopRecording) {
-      stopRecording();
-      stopRecording = null;
-    }
+    recorder.pause();
   }
 });

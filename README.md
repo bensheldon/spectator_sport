@@ -10,15 +10,15 @@ Spectator Sport uses the [`rrweb` library](https://www.rrweb.io/) to create reco
 
 - ✅ Proof of concept and technical demo
 - ✅ Running in production on Ben Sheldon's personal business websites
-- ◻️ Publish manifesto of principles and intent
+- ✅ Publish [manifesto of principles and intent](https://github.com/bensheldon/spectator_sport/discussions/6)
 - ◻️ Reliable and efficient event stream transport
-- ◻️ Player dashboard design using Bootstrap and Turbo
+- ✅ Player dashboard design using Bootstrap and Turbo ([#20](https://github.com/bensheldon/spectator_sport/pull/20))
 - ◻️ Automatic cleanup of old recordings to minimize database space
 - ◻️ Identity methods for linking application users to recordings
 - ◻️ Privacy controls with masked recording by default
 - ◻️ Automated installation process with Rails generators
 - ◻️ Fully documented installation process
-- ◻️ Release v1.0 🎉
+- 🏁 Release v1.0 🎉
 - ◻️ Live streaming replay of recordings
 - ◻️ Searching / filtering of recordings, including navigation and 404s/500s, button clicks, rage clicks, dead clicks, etc.
 - ◻️ Custom events

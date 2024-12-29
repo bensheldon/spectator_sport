@@ -1,0 +1,63 @@
+<nav class="navbar navbar-expand-lg border-bottom bg-body sticky-top">
+  <div class="container">
+    <%= link_to "⚽️ Spectator Sport", root_path, class: "navbar-brand mb-0 h1" %>
+
+    <div class="d-lg-none d-flex flex-fill justify-content-end me-2">
+      <span class="navbar-text">
+        <%= render_icon "globe", class: "align-text-bottom" %>
+        <small><%= Rails.env.capitalize %></small>
+      </span>
+    </div>
+
+    <button class="navbar-toggler position-relative" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse justify-content-end" id="navbarSupportedContent">
+      <ul class="navbar-nav">
+        <li class="nav-item d-none d-lg-flex">
+          <span class="navbar-text">
+            <%= render_icon "globe", class: "align-text-bottom" %>
+            <small><%= Rails.env.capitalize %></small>
+          </span>
+        </li>
+
+        <li class="nav-item py-2 py-lg-1 col-12 col-lg-auto">
+          <div class="vr d-none d-lg-flex h-100 mx-lg-2 text-secondary"></div>
+          <hr class="d-lg-none my-2 text-secondary">
+        </li>
+
+        <li class="nav-item dropdown" data-controller="theme">
+          <button class="nav-link dropdown-toggle" data-theme-target="dropdown" type="button" aria-expanded="false" data-bs-toggle="dropdown" data-bs-display="static" aria-label="Toggle theme">
+            <%= render_icon "circle_half" %>
+            <span class="visually-hidden"><%= t(".theme.theme") %></span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="bd-theme-text">
+            <li>
+              <button type="button" class="dropdown-item" data-theme-target="button" data-theme-value-param="light" data-action="theme#change" aria-pressed="true">
+                <%= render_icon "sun_fill" %>
+                <%= t(".theme.light") %>
+              </button>
+            </li>
+            <li>
+              <button type="button" class="dropdown-item" data-theme-target="button" data-theme-value-param="dark" data-action="theme#change" aria-pressed="false">
+                <%= render_icon "moon_stars_fill" %>
+                <%= t(".theme.dark") %>
+              </button>
+            </li>
+            <li>
+              <button type="button" class="dropdown-item btn btn-link" data-theme-target="button" data-theme-value-param="auto" data-action="theme#change" aria-pressed="false">
+                <%= render_icon "circle_half" %>
+                <%= t(".theme.auto") %>
+              </button>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+
+
+
+
+  </div>
+</nav>

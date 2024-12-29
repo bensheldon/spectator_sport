@@ -1,0 +1,66 @@
+.tooltip {
+  position: absolute;
+  z-index: 1;
+  padding: 5px;
+  background: rgba(0, 0, 0, 0.3);
+  opacity: 1;
+  border-radius: 3px;
+  text-align: center;
+  pointer-events: none;
+  color: white;
+  transition: opacity .1s ease-out;
+}
+
+.tooltip.tooltip-hidden {
+  opacity: 0;
+}
+
+.ct-label.ct-horizontal {
+  white-space: nowrap;
+}
+
+.chart-wrapper {
+  position: relative;
+  height: 200px;
+}
+
+.legend-item-color-box {
+  display: inline-block;
+  flex-shrink: 0;
+  height: 20px;
+  width: 20px;
+  border-style: solid;
+  margin-right: 3px;
+}
+
+#chart-legend-container {
+  height: 200px;
+}
+
+/* Break out of a container */
+.break-out {
+  width:100vw;
+  position:relative;
+  left:calc(-1 * (100vw - 100%)/2);
+}
+
+.toast-container {
+  z-index: 1;
+}
+
+.btn-outline-secondary {
+  border-color: #ced4da; /* $gray-400 */
+}
+
+.min-w-auto {
+  min-width: auto;
+}
+
+.w-fit-content {
+  width: fit-content
+}
+
+.svg-icon {
+  height: 1rem;
+  width: 1rem;
+}
