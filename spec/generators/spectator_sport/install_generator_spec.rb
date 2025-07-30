@@ -12,7 +12,6 @@ describe "install generator", type: :generator do
 
   it 'creates a migration for spectator_sport_events table', skip: true do
     quiet do
-      binding.irb
       run_in_example_app 'rails g spectator_sport:install:migrations'
     end
 

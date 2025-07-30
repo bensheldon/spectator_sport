@@ -1,7 +1,16 @@
+<%
+  events = @session_window.events.order(:created_at)
+  last_event_at = events.last.created_at
+%>
+
 <div class="container mt-3">
   <div class="card">
     <div class="card-body">
-      <%= tag.div "", data: { controller: "player", player_events_value: @session_window.events.order(:created_at).map(&:event_data).to_json } %>
+      <%= tag.div "", data: {
+        controller: "player",
+        player_events_value: events.map(&:event_data).to_json,
+        player_events_after: last_event_at.to_i,
+      } %>
     </div>
   </div>
 </div>
