@@ -1,0 +1,13 @@
+<turbo-stream action="append" target="player">
+  <template>
+    <%= tag.div data: { player_target: "events", events: @events.map(&:event_data).to_json } %>
+  </template>
+</turbo-stream>
+
+<% if @events.size >= SpectatorSport::Event::PAGE_LIMIT %>
+  <turbo-stream action="replace" target="more-events">
+    <template>
+      <%= render "more_events_frame", events: @events %>
+    </template>
+  </turbo-stream>
+<% end %>
