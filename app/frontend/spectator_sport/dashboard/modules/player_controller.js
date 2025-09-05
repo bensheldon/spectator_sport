@@ -5,12 +5,13 @@ import { Player } from  'rrweb-player';
 export default class extends Controller {
   static values = {
     events: { type: Array, default: [] },
-    events_after: { type: Number, default: 0 },
   }
+
+  static targets = [ "player", "events" ]
 
   connect() {
     this.player = new Player({
-      target: this.element,
+      target: this.playerTarget,
       props: {
         events: this.eventsValue,
         liveMode: true,
@@ -27,12 +28,23 @@ export default class extends Controller {
       window.location.hash = seconds;
     });
 
-    const playerElement = this.element.getElementsByClassName("rr-player")[0];
+    const playerElement = this.playerTarget.getElementsByClassName("rr-player")[0];
     playerElement.style.width = "100%";
     playerElement.style.height = null;
     playerElement.style.float = "none"
     playerElement.style["border-radius"] = "inherit";
     playerElement.style["box-shadow"] = "none";
+  }
+
+  eventsTargetConnected(element) {
+    if (!this.player) return;
+
+    const events = JSON.parse(element.dataset.events);
+    events.forEach(event => {
+      this.player.addEvent(event);
+    });
+
+    element.remove();
   }
 
   disconnect() {

@@ -1,16 +1,18 @@
-<%
-  events = @session_window.events.order(:created_at)
-  last_event_at = events.last.created_at
-%>
-
 <div class="container mt-3">
   <div class="card">
     <div class="card-body">
-      <%= tag.div "", data: {
+      <%= tag.div id: "player",
+        data: {
+        id: "player",
         controller: "player",
-        player_events_value: events.map(&:event_data).to_json,
-        player_events_after: last_event_at.to_i,
-      } %>
+        player_events_value: @events.map(&:event_data).to_json,
+      } do %>
+        <div data-player-target="player"></div>
+
+        <% if @events.size >= SpectatorSport::Event::PAGE_LIMIT %>
+          <%= render "more_events_frame", events: @events %>
+        <% end %>
+      <% end %>
     </div>
   </div>
 </div>
