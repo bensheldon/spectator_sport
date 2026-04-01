@@ -22,7 +22,7 @@ module GitWorktree
 
   # Ports blocked by Chrome (net::ERR_UNSAFE_PORT). Only lists ports relevant to
   # common development port ranges (1024+).
-  CHROME_UNSAFE_PORTS = [2049, 3659, 4045, 5060, 5061, 6000, 6566, 6665, 6666, 6667, 6668, 6669, 6697, 10080].freeze
+  CHROME_UNSAFE_PORTS = [ 2049, 3659, 4045, 5060, 5061, 6000, 6566, 6665, 6666, 6667, 6668, 6669, 6697, 10080 ].freeze
 
   # Returns a deterministic integer from +range+ based on the current worktree name.
   # Returns +range.first+ when not in a worktree (e.g. main branch).
