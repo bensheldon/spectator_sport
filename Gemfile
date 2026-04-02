@@ -23,6 +23,6 @@ gem "rubocop-rails-omakase", require: false
 group :test do
   gem "capybara"
   gem "rspec-rails"
-  gem "selenium-webdriver"
+  gem "cuprite"
   gem "warning"
 end
