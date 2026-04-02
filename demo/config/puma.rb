@@ -24,7 +24,10 @@ threads_count = ENV.fetch("RAILS_MAX_THREADS", 3)
 threads threads_count, threads_count
 
 # Specifies the `port` that Puma will listen on to receive requests; default is 3000.
-port ENV.fetch("PORT", 3000)
+# In a Git worktree (e.g. a Conductor workspace), a deterministic port is assigned
+# so multiple worktrees can run simultaneously without colliding.
+require_relative "../../config/git_worktree"
+port ENV.fetch("PORT", GitWorktree.integer(3000..3900))
 
 # Allow puma to be restarted by `bin/rails restart` command.
 plugin :tmp_restart

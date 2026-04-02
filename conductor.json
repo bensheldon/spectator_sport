@@ -1,0 +1,7 @@
+{
+    "scripts": {
+        "setup": "bin/setup",
+        "run": "bin/rails server",
+        "archive": "bin/teardown"
+    }
+}
