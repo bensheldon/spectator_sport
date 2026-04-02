@@ -8,6 +8,12 @@ Capybara.server = :puma, { Silent: true }
 Capybara.disable_animation = true # injects CSP-incompatible CSS and JS
 
 module SystemTestHelpers
+  def wait_for_turbo
+    return unless Capybara.current_driver != :rack_test
+
+    page.assert_no_selector "html[aria-busy], form[aria-busy], turbo-frame[aria-busy], html[data-turbo-not-loaded], html[data-turbo-loading], html[data-turbo-preview]", visible: :all
+  end
+
   [
     :accept_alert,
     :dismiss_alert,
