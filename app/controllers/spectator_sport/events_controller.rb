@@ -6,11 +6,11 @@ module SpectatorSport
     end
 
     def create
-      data = if params.key?(:sessionId)&& params.key?(:windowId) && params.key?(:events)
-               params.slice(:sessionId, :windowId, :events).stringify_keys
+      data = if params.key?(:sessionId) && params.key?(:windowId) && params.key?(:events)
+        params.slice(:sessionId, :windowId, :events).stringify_keys
       else
-               # beacon sends JSON in the request body
-               JSON.parse(request.body.read).slice("sessionId", "windowId", "events")
+        # beacon sends JSON in the request body
+        JSON.parse(request.body.read).slice("sessionId", "windowId", "events")
       end
 
       session_secure_id = data["sessionId"]

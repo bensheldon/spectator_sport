@@ -64,3 +64,24 @@
   height: 1rem;
   width: 1rem;
 }
+
+/*Style table within card*/
+.card > table:first-child > thead > tr:first-child > th:first-child {
+  border-top-left-radius: var(--bs-card-inner-border-radius);
+}
+.card > table:first-child > thead > tr:first-child > th:last-child {
+  border-top-right-radius: var(--bs-card-inner-border-radius);
+}
+.card > table:last-child > tbody > tr:last-child > td:first-child {
+  border-bottom-left-radius: var(--bs-card-inner-border-radius);
+}
+.card > table:last-child > tbody > tr:last-child > td:last-child {
+  border-bottom-right-radius: var(--bs-card-inner-border-radius);
+}
+.card > table {
+  margin-bottom: var(--bs-card-border-width, 1px);
+}
+.card > table > tbody > tr:last-child > td {
+  border-bottom: none;
+  box-shadow: none;
+}

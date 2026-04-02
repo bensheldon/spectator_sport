@@ -1,21 +1,21 @@
 <div class="container mt-3">
-  <div id="player" class="d-flex justify-content-center"></div>
+  <div class="card">
+    <div class="card-body">
+      <%= tag.div id: "player",
+        data: {
+        id: "player",
+        controller: "player",
+        player_events_value: @events.map(&:event_data).to_json,
+      } do %>
+        <div data-player-target="player"></div>
+
+        <% if @events.size >= SpectatorSport::Event::PAGE_LIMIT %>
+          <%= render "more_events_frame", events: @events %>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
   <div class="d-flex justify-content-center pt-2">
     <%= link_to("see technical details", details_session_window_path(@session_window)) %>
   </div>
 </div>
-
-<script type="module">
-  import { Player } from  'rrweb-player';
-
-  const player = new Player({
-    target: document.getElementById('player'),
-    props: {
-      events: <%== @session_window.events.order(:created_at).map(&:event_data).to_json %>,
-    },
-  });
-
-  document.addEventListener('turbo:before-visit', () => {
-    player.$destroy();
-  });
-</script>

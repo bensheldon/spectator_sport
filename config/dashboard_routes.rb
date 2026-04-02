@@ -3,6 +3,7 @@ SpectatorSport::Dashboard::Engine.routes.draw do
   resources :session_windows, only: [ :show, :destroy ] do
     member do
       get :details
+      get :events
     end
   end
 
