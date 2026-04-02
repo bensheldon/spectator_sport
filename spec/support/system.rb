@@ -1,12 +1,19 @@
 # frozen_string_literal: true
 
-require "selenium-webdriver"
+require "capybara/rspec"
+require "capybara/cuprite"
 
 Capybara.default_max_wait_time = 2
 Capybara.server = :puma, { Silent: true }
 Capybara.disable_animation = true # injects CSP-incompatible CSS and JS
 
 module SystemTestHelpers
+  def wait_for_turbo
+    return unless Capybara.current_driver != :rack_test
+
+    page.assert_no_selector "html[aria-busy], form[aria-busy], turbo-frame[aria-busy], html[data-turbo-not-loaded], html[data-turbo-loading], html[data-turbo-preview]", visible: :all
+  end
+
   [
     :accept_alert,
     :dismiss_alert,
@@ -29,22 +36,19 @@ RSpec.configure do |config|
   config.include ActionView::RecordIdentifier, type: :system
   config.include SystemTestHelpers, type: :system
 
-  config.before(:each, type: :system) do |example|
+  config.before(:each, type: :system) do
     ActiveRecord::Base.connection.disable_query_cache!
 
-    if ENV['SHOW_BROWSER']
-      example.metadata[:js] = true
-      driven_by :selenium, using: :chrome, screen_size: [ 1024, 800 ]
-    else
-      driven_by :rack_test
-    end
-  end
+    require File.expand_path("../../config/git_worktree", __dir__)
+    Capybara.server_port = GitWorktree.integer(4000..4990, stride: ENV.fetch("PARALLEL_TEST_GROUPS", 1).to_i) + ENV.fetch("TEST_ENV_NUMBER", 0).to_i
 
-  config.before(:each, :js, type: :system) do
-    # Chrome's no-sandbox option is required for running in Docker
-    driven_by :selenium, using: (ENV['SHOW_BROWSER'] ? :chrome : :headless_chrome), screen_size: [ 1024, 800 ] do |driver_options|
-      driver_options.add_argument("--disable-dev-shm-usage")
-      driver_options.add_argument("--no-sandbox")
-    end
+    driven_by(
+      :cuprite,
+      screen_size: [ 1024, 800 ],
+      options: {
+        headless: ENV["SHOW_BROWSER"] ? false : true,
+        browser_options: ENV["DOCKER"] ? { "no-sandbox" => nil } : {}
+      }
+    )
   end
 end
