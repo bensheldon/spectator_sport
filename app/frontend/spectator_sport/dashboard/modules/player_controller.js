@@ -7,7 +7,7 @@ export default class extends Controller {
     events: { type: Array, default: [] },
   }
 
-  static targets = [ "player", "events" ]
+  static targets = [ "player", "events", "linkUrl" ]
 
   connect() {
     this.player = new Player({
@@ -18,14 +18,21 @@ export default class extends Controller {
       }
     });
 
-    if (window.location.hash) {
-      const seconds = parseInt(window.location.hash.substring(1));
+    const urlParams = new URLSearchParams(window.location.search);
+    const time = urlParams.get('t');
+    if (time) {
+      const seconds = parseInt(time);
       this.player.getReplayer().play(seconds * 1000);
     }
 
+    let lastSeconds = null;
     this.player.addEventListener('ui-update-current-time', (event) => {
-      const seconds = parseInt(event.payload / 1000);
-      window.location.hash = seconds;
+      const seconds = Math.floor(event.payload / 1000);
+      if (seconds === lastSeconds) return;
+      lastSeconds = seconds;
+      const url = `${window.location.origin}${window.location.pathname}?t=${seconds}`;
+      this.linkUrlTarget.value = `?t=${seconds}`;
+      this.linkUrlTarget.dataset.url = url;
     });
 
     const playerElement = this.playerTarget.getElementsByClassName("rr-player")[0];
