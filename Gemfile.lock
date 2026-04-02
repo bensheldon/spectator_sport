@@ -101,6 +101,9 @@ GEM
       capybara (~> 3.0)
       ferrum (~> 0.17.0)
     date (3.4.1)
+    debug (1.11.1)
+      irb (~> 1.10)
+      reline (>= 0.3.8)
     diff-lcs (1.6.2)
     drb (2.2.3)
     erb (5.0.2)
@@ -337,6 +340,7 @@ PLATFORMS
 DEPENDENCIES
   capybara
   cuprite
+  debug (>= 1.0.0)
   pg
   puma
   rspec-rails

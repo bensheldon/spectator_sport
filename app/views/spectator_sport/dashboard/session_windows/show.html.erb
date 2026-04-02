@@ -9,6 +9,13 @@
       } do %>
         <div data-player-target="player"></div>
 
+        <div class="mt-3 input-group" data-controller="clipboard">
+          <input type="text" class="form-control form-control-sm" readonly style="max-width: 8rem" data-player-target="linkUrl" data-clipboard-target="source" placeholder="—">
+          <button class="btn btn-sm btn-outline-secondary" data-clipboard-target="button" data-action="click->clipboard#copy">
+            Copy link
+          </button>
+        </div>
+
         <% if @events.size >= SpectatorSport::Event::PAGE_LIMIT %>
           <%= render "more_events_frame", events: @events %>
         <% end %>
