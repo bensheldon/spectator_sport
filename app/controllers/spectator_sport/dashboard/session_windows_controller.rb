@@ -4,6 +4,7 @@ module SpectatorSport
       def show
         @session_window = SessionWindow.find(params[:id])
         @events = @session_window.events.page_after(nil)
+        @tags = SpectatorSport::SessionWindowTag.migrated? ? @session_window.session_window_tags.to_a : []
       end
 
       def events

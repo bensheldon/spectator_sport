@@ -22,6 +22,13 @@
       <% end %>
     </div>
   </div>
+  <% if @tags.any? %>
+    <div class="d-flex justify-content-center pt-2 gap-2">
+      <% @tags.each do |swt| %>
+        <%= link_to swt.tag, tag_path(swt.tag), class: "badge text-bg-secondary text-decoration-none" %>
+      <% end %>
+    </div>
+  <% end %>
   <div class="d-flex justify-content-center pt-2">
     <%= link_to("see technical details", details_session_window_path(@session_window)) %>
   </div>

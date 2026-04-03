@@ -1,0 +1,30 @@
+<div class="container my-3">
+  <h2>Recordings tagged: <%= @tag %></h2>
+  <% if @session_windows.any? %>
+    <div class="card mt-3">
+      <table class="table">
+        <caption class="visually-hidden">Recordings tagged <%= @tag %></caption>
+        <thead>
+        <tr>
+          <th>Recording</th>
+          <th>Session ID</th>
+          <th>Updated</th>
+          <th>Created</th>
+        </tr>
+        </thead>
+        <tbody>
+        <% @session_windows.each do |session_window| %>
+          <tr>
+            <td><%= link_to "Session (Window ##{session_window.id})", session_window_path(session_window.id) %></td>
+            <td><%= session_window.session_id %></td>
+            <td><%= tag.time(time_ago_in_words(session_window.updated_at), datetime: session_window.updated_at, title: session_window.updated_at) %>
+            <td><%= tag.time(time_ago_in_words(session_window.created_at), datetime: session_window.created_at, title: session_window.created_at) %>
+          </tr>
+        <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <em>No recordings found with tag "<%= @tag %>".</em>
+  <% end %>
+</div>

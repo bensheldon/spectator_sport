@@ -7,6 +7,9 @@
         <tr>
           <th>Recording</th>
           <th>Session ID</th>
+          <% if SpectatorSport::SessionWindowTag.migrated? %>
+            <th>Tags</th>
+          <% end %>
           <th>Updated</th>
           <th>Created</th>
           <th>Actions</th>
@@ -17,6 +20,13 @@
           <tr>
             <td><%= link_to "Session (Window ##{session_window.id})", session_window_path(session_window.id) %></td>
             <td><%= session_window.session_id %></td>
+            <% if SpectatorSport::SessionWindowTag.migrated? %>
+              <td>
+                <% session_window.session_window_tags.each do |swt| %>
+                  <%= link_to swt.tag, tag_path(swt.tag) %>
+                <% end %>
+              </td>
+            <% end %>
             <td><%= tag.time(time_ago_in_words(session_window.updated_at), datetime: session_window.updated_at, title: session_window.updated_at) %>
             <td><%= tag.time(time_ago_in_words(session_window.created_at), datetime: session_window.created_at, title: session_window.created_at) %>
             <td>

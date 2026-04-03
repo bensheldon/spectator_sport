@@ -49,7 +49,8 @@ module ExampleAppHelper
     models = [
       SpectatorSport::Event,
       SpectatorSport::Session,
-      SpectatorSport::SessionWindow
+      SpectatorSport::SessionWindow,
+      SpectatorSport::SessionWindowTag
     ]
     quiet do
       models.each do |model|
