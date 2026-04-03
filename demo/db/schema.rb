@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2025_04_03_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_03_000000) do
   create_table "spectator_sport_events", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.json "event_data", null: false
