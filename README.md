@@ -57,6 +57,18 @@ To install Spectator Sport in your Rails application:
         ```
   3. To view recordings, you will want to mount the Player Dashboard in your application and set up authorization to limit access. See the section on [Dashboard authorization](#dashboard-authorization) for instructions.
 
+## Tagging recordings
+
+You can associate a string tag (e.g. a user ID or account identifier) with the current recording by calling `spectator_sport_tag_recording` in any template:
+
+```erb
+<%= spectator_sport_tag_recording(current_user.id.to_s) %>
+```
+
+This renders a hidden `<meta>` element signed by the server. The recording client detects it and immediately sends it to the API, where the signature is verified before the tag is stored. Tags are displayed in the dashboard and can be used to look up all recordings associated with a given value.
+
+**Note:** this requires the `spectator_sport_session_window_tags` migration to be applied (`bin/rails spectator_sport:install:migrations && bin/rails db:migrate`). If the migration hasn't been run, the feature is silently disabled.
+
 ## Dashboard authorization
 
 It is advisable to manually install and set up authorization for the **Player Dashboard** and refrain from making it public. 

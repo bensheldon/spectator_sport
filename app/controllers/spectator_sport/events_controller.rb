@@ -29,7 +29,7 @@ module SpectatorSport
       window.update(updated_at: last_event[:created_at]) if last_event
 
       if SpectatorSport::SessionWindowTag.migrated?
-        verifier = Rails.application.message_verifier(:spectator_sport_recording_tag)
+        verifier = Rails.application.message_verifier(:spectator_sport_tag_recording)
         Array(data["tags"]).first(20).each do |signed_tag|
           tag_value = verifier.verified(signed_tag)
           next unless tag_value.is_a?(String) && tag_value.present?
