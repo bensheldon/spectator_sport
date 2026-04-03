@@ -10,31 +10,40 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2024_09_23_140845) do
+ActiveRecord::Schema[8.1].define(version: 2025_04_03_000000) do
   create_table "spectator_sport_events", force: :cascade do |t|
     t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
+    t.json "event_data", null: false
     t.integer "session_id", null: false
     t.integer "session_window_id"
-    t.json "event_data", null: false
-    t.index [ "session_id", "created_at" ], name: "index_spectator_sport_events_on_session_id_and_created_at"
-    t.index [ "session_id" ], name: "index_spectator_sport_events_on_session_id"
-    t.index [ "session_window_id", "created_at" ], name: "idx_on_session_window_id_created_at_f1aab0a880"
-    t.index [ "session_window_id" ], name: "index_spectator_sport_events_on_session_window_id"
+    t.datetime "updated_at", null: false
+    t.index ["session_id", "created_at"], name: "index_spectator_sport_events_on_session_id_and_created_at"
+    t.index ["session_id"], name: "index_spectator_sport_events_on_session_id"
+    t.index ["session_window_id", "created_at"], name: "idx_on_session_window_id_created_at_f1aab0a880"
+    t.index ["session_window_id"], name: "index_spectator_sport_events_on_session_window_id"
+  end
+
+  create_table "spectator_sport_session_window_tags", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "session_window_id", null: false
+    t.string "tag", null: false
+    t.datetime "updated_at", null: false
+    t.index ["session_window_id", "tag"], name: "idx_on_session_window_id_tag_920317ef54", unique: true
+    t.index ["session_window_id"], name: "index_spectator_sport_session_window_tags_on_session_window_id"
   end
 
   create_table "spectator_sport_session_windows", force: :cascade do |t|
     t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.integer "session_id", null: false
     t.string "secure_id", null: false
-    t.index [ "session_id" ], name: "index_spectator_sport_session_windows_on_session_id"
+    t.integer "session_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["session_id"], name: "index_spectator_sport_session_windows_on_session_id"
   end
 
   create_table "spectator_sport_sessions", force: :cascade do |t|
     t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
     t.string "secure_id", null: false
-    t.index [ "secure_id", "created_at" ], name: "index_spectator_sport_sessions_on_secure_id_and_created_at"
+    t.datetime "updated_at", null: false
+    t.index ["secure_id", "created_at"], name: "index_spectator_sport_sessions_on_secure_id_and_created_at"
   end
 end

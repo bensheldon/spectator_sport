@@ -162,8 +162,71 @@ class Events {
   }
 }
 
+class TagWatcher {
+  constructor(sessionId, windowId) {
+    this.sessionId = sessionId;
+    this.windowId = windowId;
+    this.seenTags = new Set();
+    this.pendingTags = [];
+    this.debounceTimeout = null;
+    this.observer = null;
+  }
+
+  start() {
+    document.querySelectorAll('meta[name="spectator-sport-recording-tag"]').forEach(el => {
+      this.enqueue(el.content);
+    });
+
+    this.observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        for (const node of mutation.addedNodes) {
+          if (node.nodeType !== Node.ELEMENT_NODE) continue;
+          if (node.matches('meta[name="spectator-sport-recording-tag"]')) {
+            this.enqueue(node.content);
+          }
+          node.querySelectorAll('meta[name="spectator-sport-recording-tag"]').forEach(el => {
+            this.enqueue(el.content);
+          });
+        }
+      }
+    });
+    this.observer.observe(document.documentElement, { childList: true, subtree: true });
+  }
+
+  enqueue(signedTag) {
+    if (this.seenTags.has(signedTag)) return;
+    this.seenTags.add(signedTag);
+    this.pendingTags.push(signedTag);
+    this.debouncedFlush();
+  }
+
+  debouncedFlush() {
+    if (!this.debounceTimeout) {
+      this.debounceTimeout = setTimeout(() => {
+        this.debounceTimeout = null;
+        this.flush();
+      }, 100);
+    }
+  }
+
+  flush() {
+    if (this.pendingTags.length === 0) return;
+    const tags = this.pendingTags.splice(0);
+    fetch(POST_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: this.sessionId, windowId: this.windowId, events: [], tags }),
+    }).catch((error) => {
+      console.error(error);
+    });
+  }
+}
+
 const recorder = new Recorder();
 recorder.start();
+
+const tagWatcher = new TagWatcher(recorder.sessionId, recorder.windowId);
+tagWatcher.start();
 
 window.addEventListener("pageshow", function(_event) {
   log("pageshow");
