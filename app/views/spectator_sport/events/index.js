@@ -29,6 +29,8 @@ function log(...args) {
 const POST_URL = new URL("./events", document.currentScript.src).href;
 const POST_INTERVAL_SECONDS = 15;
 const KEEPALIVE_BYTE_LIMIT = 60000; // Fetch payloads >64kb cannot use keepalive: true
+const RECORDING_TAG_SELECTOR = 'meta[name="spectator-sport-recording-tag"]';
+const STOP_SELECTOR = 'meta[name="spectator-sport-stop"]';
 
 class Recorder {
   constructor() {
@@ -173,7 +175,7 @@ class TagWatcher {
   }
 
   start() {
-    document.querySelectorAll('meta[name="spectator-sport-recording-tag"]').forEach(el => {
+    document.querySelectorAll(RECORDING_TAG_SELECTOR).forEach(el => {
       this.enqueue(el.content);
     });
 
@@ -181,10 +183,10 @@ class TagWatcher {
       for (const mutation of mutations) {
         for (const node of mutation.addedNodes) {
           if (node.nodeType !== Node.ELEMENT_NODE) continue;
-          if (node.matches('meta[name="spectator-sport-recording-tag"]')) {
+          if (node.matches(RECORDING_TAG_SELECTOR)) {
             this.enqueue(node.content);
           }
-          node.querySelectorAll('meta[name="spectator-sport-recording-tag"]').forEach(el => {
+          node.querySelectorAll(RECORDING_TAG_SELECTOR).forEach(el => {
             this.enqueue(el.content);
           });
         }
@@ -222,15 +224,62 @@ class TagWatcher {
   }
 }
 
+class StopWatcher {
+  constructor(recorder) {
+    this.recorder = recorder;
+    this.observer = null;
+  }
+
+  start() {
+    this.observer = new MutationObserver((mutations) => {
+      let changed = false;
+      for (const mutation of mutations) {
+        for (const node of [...mutation.addedNodes, ...mutation.removedNodes]) {
+          if (node.nodeType !== Node.ELEMENT_NODE) continue;
+          if (node.matches(STOP_SELECTOR) ||
+              node.querySelector(STOP_SELECTOR)) {
+            changed = true;
+          }
+        }
+      }
+      if (changed) {
+        this.update();
+      }
+    });
+    this.observer.observe(document.documentElement, { childList: true, subtree: true });
+  }
+
+  update() {
+    if (document.querySelector(STOP_SELECTOR)) {
+      this.recorder.stop();
+    } else {
+      this.recorder.start();
+    }
+  }
+}
+
+function isStopped() {
+  return !!document.querySelector(STOP_SELECTOR);
+}
+
 const recorder = new Recorder();
-recorder.start();
+if (!isStopped()) {
+  recorder.start();
+}
 
 const tagWatcher = new TagWatcher(recorder.sessionId, recorder.windowId);
 tagWatcher.start();
 
+const stopWatcher = new StopWatcher(recorder);
+stopWatcher.start();
+
 window.addEventListener("pageshow", function(_event) {
   log("pageshow");
-  recorder.start();
+  if (isStopped()) {
+    recorder.stop();
+  } else {
+    recorder.start();
+  }
 });
 
 window.addEventListener("pagehide", function(_event) {
@@ -241,7 +290,9 @@ window.addEventListener("pagehide", function(_event) {
 document.addEventListener("visibilitychange", function(_event) {
   log("visibilitychange", document.visibilityState);
   if (document.visibilityState === "visible") {
-    recorder.unpause();
+    if (!isStopped()) {
+      recorder.unpause();
+    }
   } else if (document.visibilityState === "hidden") {
     recorder.pause();
   }

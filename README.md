@@ -69,6 +69,18 @@ This renders a hidden `<meta>` element signed by the server. The recording clien
 
 **Note:** this requires the `spectator_sport_session_window_tags` migration to be applied (`bin/rails spectator_sport:install:migrations && bin/rails db:migrate`). If the migration hasn't been run, the feature is silently disabled.
 
+## Stopping recording
+
+You can pause recording for a page by calling `spectator_sport_stop_recording` in any template:
+
+```erb
+<%= spectator_sport_stop_recording %>
+```
+
+This renders a hidden `<meta>` element that the recording client detects on page load. When present, rrweb recording is stopped and no events are buffered or sent. Recording automatically resumes when the user navigates to a page that does not have this tag.
+
+This is useful when navigating via Turbo to pages that shouldn't be recorded — without this tag the recorder would continue running across navigations.
+
 ## Dashboard authorization
 
 It is advisable to manually install and set up authorization for the **Player Dashboard** and refrain from making it public. 
