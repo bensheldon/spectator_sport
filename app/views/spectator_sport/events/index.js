@@ -234,8 +234,8 @@ class StopWatcher {
       for (const mutation of mutations) {
         for (const node of [...mutation.addedNodes, ...mutation.removedNodes]) {
           if (node.nodeType !== Node.ELEMENT_NODE) continue;
-          if (node.matches('meta[name="spectator-sport-stop-recording"]') ||
-              node.querySelector('meta[name="spectator-sport-stop-recording"]')) {
+          if (node.matches('meta[name="spectator-sport-stop"]') ||
+              node.querySelector('meta[name="spectator-sport-stop"]')) {
             changed = true;
           }
         }
@@ -248,7 +248,7 @@ class StopWatcher {
   }
 
   update() {
-    if (document.querySelector('meta[name="spectator-sport-stop-recording"]')) {
+    if (document.querySelector('meta[name="spectator-sport-stop"]')) {
       this.recorder.stop();
     } else {
       this.recorder.start();
@@ -257,7 +257,7 @@ class StopWatcher {
 }
 
 function isStopped() {
-  return !!document.querySelector('meta[name="spectator-sport-stop-recording"]');
+  return !!document.querySelector('meta[name="spectator-sport-stop"]');
 }
 
 const recorder = new Recorder();

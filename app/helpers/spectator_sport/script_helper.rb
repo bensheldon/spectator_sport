@@ -10,7 +10,7 @@ module SpectatorSport
     end
 
     def spectator_sport_stop_recording
-      tag.meta(name: "spectator-sport-stop-recording")
+      tag.meta(name: "spectator-sport-stop")
     end
   end
 end
