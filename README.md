@@ -153,6 +153,21 @@ open http://localhost:3000
 # 6. Make changes, see the result, commit and make a PR!
 ```
 
+## Releasing a new version
+
+1. Update the version in `lib/spectator_sport/version.rb`
+2. Run `bundle install` to update `Gemfile.lock`
+3. Commit the version bump and updated `Gemfile.lock`:
+    ```bash
+    git add lib/spectator_sport/version.rb Gemfile.lock
+    git commit -m "Bump version to x.y.z"
+    ```
+3. Build and publish to RubyGems, tag, and push to GitHub:
+    ```bash
+    bundle exec rake release
+    ```
+4. Create a GitHub Release at https://github.com/bensheldon/spectator_sport/releases using the new `vx.y.z` tag.
+
 ## License
 
 The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
