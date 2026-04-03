@@ -29,6 +29,8 @@ function log(...args) {
 const POST_URL = new URL("./events", document.currentScript.src).href;
 const POST_INTERVAL_SECONDS = 15;
 const KEEPALIVE_BYTE_LIMIT = 60000; // Fetch payloads >64kb cannot use keepalive: true
+const RECORDING_TAG_SELECTOR = 'meta[name="spectator-sport-recording-tag"]';
+const STOP_SELECTOR = 'meta[name="spectator-sport-stop"]';
 
 class Recorder {
   constructor() {
@@ -173,7 +175,7 @@ class TagWatcher {
   }
 
   start() {
-    document.querySelectorAll('meta[name="spectator-sport-recording-tag"]').forEach(el => {
+    document.querySelectorAll(RECORDING_TAG_SELECTOR).forEach(el => {
       this.enqueue(el.content);
     });
 
@@ -181,10 +183,10 @@ class TagWatcher {
       for (const mutation of mutations) {
         for (const node of mutation.addedNodes) {
           if (node.nodeType !== Node.ELEMENT_NODE) continue;
-          if (node.matches('meta[name="spectator-sport-recording-tag"]')) {
+          if (node.matches(RECORDING_TAG_SELECTOR)) {
             this.enqueue(node.content);
           }
-          node.querySelectorAll('meta[name="spectator-sport-recording-tag"]').forEach(el => {
+          node.querySelectorAll(RECORDING_TAG_SELECTOR).forEach(el => {
             this.enqueue(el.content);
           });
         }
@@ -234,8 +236,8 @@ class StopWatcher {
       for (const mutation of mutations) {
         for (const node of [...mutation.addedNodes, ...mutation.removedNodes]) {
           if (node.nodeType !== Node.ELEMENT_NODE) continue;
-          if (node.matches('meta[name="spectator-sport-stop"]') ||
-              node.querySelector('meta[name="spectator-sport-stop"]')) {
+          if (node.matches(STOP_SELECTOR) ||
+              node.querySelector(STOP_SELECTOR)) {
             changed = true;
           }
         }
@@ -248,7 +250,7 @@ class StopWatcher {
   }
 
   update() {
-    if (document.querySelector('meta[name="spectator-sport-stop"]')) {
+    if (document.querySelector(STOP_SELECTOR)) {
       this.recorder.stop();
     } else {
       this.recorder.start();
@@ -257,7 +259,7 @@ class StopWatcher {
 }
 
 function isStopped() {
-  return !!document.querySelector('meta[name="spectator-sport-stop"]');
+  return !!document.querySelector(STOP_SELECTOR);
 }
 
 const recorder = new Recorder();
