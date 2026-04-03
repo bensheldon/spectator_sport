@@ -7,6 +7,7 @@ Rails.application.routes.draw do
   resources :examples, only: [ :index, :show, :new, :create ] do
     collection do
       get :error
+      get :stopped
     end
   end
 end

@@ -8,5 +8,9 @@ module SpectatorSport
       signed = Rails.application.message_verifier(:spectator_sport_tag_recording).generate(tag_value)
       tag.meta(name: "spectator-sport-recording-tag", content: signed)
     end
+
+    def spectator_sport_stop_recording
+      tag.meta(name: "spectator-sport-stop-recording")
+    end
   end
 end
