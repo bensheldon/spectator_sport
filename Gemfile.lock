@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    spectator_sport (0.2.0)
+    spectator_sport (0.3.0)
       rails (>= 7.2.1)
 
 GEM
