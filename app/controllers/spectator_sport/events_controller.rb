@@ -7,10 +7,10 @@ module SpectatorSport
 
     def create
       data = if params.key?(:sessionId) && params.key?(:windowId) && params.key?(:events)
-        params.slice(:sessionId, :windowId, :events, :tags).stringify_keys
+        params.slice(:sessionId, :windowId, :events, :tags, :labels).stringify_keys
       else
         # beacon sends JSON in the request body
-        JSON.parse(request.body.read).slice("sessionId", "windowId", "events", "tags")
+        JSON.parse(request.body.read).slice("sessionId", "windowId", "events", "tags", "labels")
       end
 
       session_secure_id = data["sessionId"]
@@ -35,6 +35,22 @@ module SpectatorSport
           next unless tag_value.is_a?(String) && tag_value.present?
           SessionWindowTag.find_or_create_by(session_window: window, tag: tag_value)
         rescue ActiveRecord::RecordNotUnique
+          nil
+        end
+      end
+
+      if SpectatorSport::Label.migrated?
+        verifier = Rails.application.message_verifier(:spectator_sport_label_recording)
+        Array(data["labels"]).first(20).each do |signed_label|
+          label_data = verifier.verified(signed_label)
+          next unless label_data.is_a?(Hash)
+          Label.record(
+            session_window: window,
+            value: label_data["value"],
+            key: label_data["key"],
+            strategy: label_data["strategy"]
+          )
+        rescue StandardError
           nil
         end
       end

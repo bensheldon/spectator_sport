@@ -30,6 +30,7 @@ const POST_URL = new URL("./events", document.currentScript.src).href;
 const POST_INTERVAL_SECONDS = 15;
 const KEEPALIVE_BYTE_LIMIT = 60000; // Fetch payloads >64kb cannot use keepalive: true
 const RECORDING_TAG_SELECTOR = 'meta[name="spectator-sport-recording-tag"]';
+const RECORDING_LABEL_SELECTOR = 'meta[name="spectator-sport-recording-label"]';
 const STOP_SELECTOR = 'meta[name="spectator-sport-stop"]';
 
 class Recorder {
@@ -224,6 +225,66 @@ class TagWatcher {
   }
 }
 
+class LabelWatcher {
+  constructor(sessionId, windowId) {
+    this.sessionId = sessionId;
+    this.windowId = windowId;
+    this.seenLabels = new Set();
+    this.pendingLabels = [];
+    this.debounceTimeout = null;
+    this.observer = null;
+  }
+
+  start() {
+    document.querySelectorAll(RECORDING_LABEL_SELECTOR).forEach(el => {
+      this.enqueue(el.content);
+    });
+
+    this.observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        for (const node of mutation.addedNodes) {
+          if (node.nodeType !== Node.ELEMENT_NODE) continue;
+          if (node.matches(RECORDING_LABEL_SELECTOR)) {
+            this.enqueue(node.content);
+          }
+          node.querySelectorAll(RECORDING_LABEL_SELECTOR).forEach(el => {
+            this.enqueue(el.content);
+          });
+        }
+      }
+    });
+    this.observer.observe(document.documentElement, { childList: true, subtree: true });
+  }
+
+  enqueue(signedLabel) {
+    if (this.seenLabels.has(signedLabel)) return;
+    this.seenLabels.add(signedLabel);
+    this.pendingLabels.push(signedLabel);
+    this.debouncedFlush();
+  }
+
+  debouncedFlush() {
+    if (!this.debounceTimeout) {
+      this.debounceTimeout = setTimeout(() => {
+        this.debounceTimeout = null;
+        this.flush();
+      }, 100);
+    }
+  }
+
+  flush() {
+    if (this.pendingLabels.length === 0) return;
+    const labels = this.pendingLabels.splice(0);
+    fetch(POST_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: this.sessionId, windowId: this.windowId, events: [], labels }),
+    }).catch((error) => {
+      console.error(error);
+    });
+  }
+}
+
 class StopWatcher {
   constructor(recorder) {
     this.recorder = recorder;
@@ -269,6 +330,9 @@ if (!isStopped()) {
 
 const tagWatcher = new TagWatcher(recorder.sessionId, recorder.windowId);
 tagWatcher.start();
+
+const labelWatcher = new LabelWatcher(recorder.sessionId, recorder.windowId);
+labelWatcher.start();
 
 const stopWatcher = new StopWatcher(recorder);
 stopWatcher.start();

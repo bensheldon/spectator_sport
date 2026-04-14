@@ -5,6 +5,7 @@ module SpectatorSport
         @session_window = SessionWindow.find(params[:id])
         @events = @session_window.events.page_after(nil)
         @tags = SpectatorSport::SessionWindowTag.migrated? ? @session_window.session_window_tags.to_a : []
+        @labels = SpectatorSport::Label.migrated? ? @session_window.labels.to_a : []
       end
 
       def events
@@ -25,6 +26,8 @@ module SpectatorSport
       def destroy
         @session_window = SessionWindow.find(params[:id])
         @session_window.events.delete_all
+        @session_window.session_window_tags.delete_all if SpectatorSport::SessionWindowTag.migrated?
+        @session_window.labels.delete_all if SpectatorSport::Label.migrated?
         @session_window.delete
 
         redirect_to root_path

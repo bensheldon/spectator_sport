@@ -1,0 +1,9 @@
+<div class="container my-3">
+  <h2>Recordings labeled: <%= @key %>: <%= @value %></h2>
+  <p><%= link_to "See all recordings with key: #{@key}", label_key_path(@key) %></p>
+  <% if @session_windows.any? %>
+    <%= render "spectator_sport/dashboard/shared/session_windows", session_windows: @session_windows %>
+  <% else %>
+    <em>No recordings found with label "<%= @key %>: <%= @value %>".</em>
+  <% end %>
+</div>

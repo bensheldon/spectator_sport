@@ -1,7 +1,8 @@
 <div class="container my-3">
-  <% if @session_windows.to_a.any? %>
+  <h2>Recordings labeled: <%= @value %></h2>
+  <% if @session_windows.any? %>
     <%= render "spectator_sport/dashboard/shared/session_windows", session_windows: @session_windows %>
   <% else %>
-    <em>No recordings found.</em>
+    <em>No recordings found with label "<%= @value %>".</em>
   <% end %>
 </div>

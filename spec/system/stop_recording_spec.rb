@@ -16,10 +16,7 @@ RSpec.describe "Stop recording", type: :system, js: true do
 
     # Navigate away to trigger pagehide, which flushes events
     visit "/spectator_sport_dashboard"
-
-    page.document.synchronize(Capybara.default_max_wait_time) do
-      raise Capybara::ElementNotFound, "session window not stored yet" unless SpectatorSport::SessionWindow.exists?
-    end
+    expect(page).to have_text("Spectator Sport")
 
     expect(SpectatorSport::SessionWindow.count).to be > 0
   end

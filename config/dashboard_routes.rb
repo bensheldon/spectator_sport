@@ -7,6 +7,9 @@ SpectatorSport::Dashboard::Engine.routes.draw do
     end
   end
   resources :tags, only: [ :show ], param: :name
+  get "labels/tags/:value", to: "labels#tags", as: :label_tag
+  get "labels/keys/:key", to: "labels#key_index", as: :label_key
+  get "labels/keys/:key/:value", to: "labels#show", as: :label
 
   scope :frontend, controller: :frontends, defaults: { version: SpectatorSport::VERSION.tr(".", "-") } do
     get "modules/:version/:id", action: :module, as: :frontend_module, constraints: { format: "js" }

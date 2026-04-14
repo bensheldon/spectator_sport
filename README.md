@@ -69,6 +69,26 @@ This renders a hidden `<meta>` element signed by the server. The recording clien
 
 **Note:** this requires the `spectator_sport_session_window_tags` migration to be applied (`bin/rails spectator_sport:install:migrations && bin/rails db:migrate`). If the migration hasn't been run, the feature is silently disabled.
 
+## Labeling recordings
+
+You can associate key-value labels with the current recording by calling `spectator_sport_label_recording` in any template:
+
+```erb
+<%= spectator_sport_label_recording(current_user.id.to_s, key: "user_id", strategy: :one) %>
+<%= spectator_sport_label_recording("admin", key: "role", strategy: :many) %>
+<%= spectator_sport_label_recording("vip") %>
+```
+
+The `key` argument is optional. When omitted, the label behaves like a tag. The `strategy` argument (default `:many`) controls how values are stored per recording:
+
+- `strategy: :many` (default): multiple values for the same key are accumulated per recording.
+- `strategy: :one`: only one value per key is kept per recording. A later call with the same key replaces the stored value. Without a key, behaves like `:many`.
+- `strategy: :first`: only the first value for a key is stored; subsequent calls with the same key are ignored. Requires a key.
+
+This renders a hidden `<meta>` element signed by the server. The recording client detects it and immediately sends it to the API, where the signature is verified before the label is stored. Labels are displayed in the dashboard and can be used to look up all recordings associated with a given key-value pair.
+
+**Note:** this requires the `spectator_sport_labels` migration to be applied (`bin/rails spectator_sport:install:migrations && bin/rails db:migrate`). If the migration hasn't been run, the feature is silently disabled.
+
 ## Stopping recording
 
 You can pause recording for a page by calling `spectator_sport_stop_recording` in any template:
