@@ -48,13 +48,13 @@ describe SpectatorSport::Dashboard::SessionWindowsController, type: :controller 
     end
 
     it "deletes associated events" do
-      SpectatorSport::Event.insert_all([{
+      SpectatorSport::Event.insert_all([ {
         session_id: spectator_session.id,
         session_window_id: session_window.id,
         event_data: { "type" => 4 }.to_json,
         created_at: Time.current,
         updated_at: Time.current
-      }])
+      } ])
       event_id = SpectatorSport::Event.where(session_window_id: session_window.id).pick(:id)
 
       delete :destroy, params: { id: session_window.id }
