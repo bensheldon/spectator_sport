@@ -6,6 +6,7 @@ RSpec.describe "Recording labels", type: :system, js: true do
   it "stores a keyed label from the page and shows it in the dashboard" do
     visit "/examples"
     expect(page).to have_text("Your browser activity is being recorded.")
+    wait_for_recording
 
     visit "/spectator_sport_dashboard"
     expect(page).to have_text("user_id: 27")
@@ -18,6 +19,7 @@ RSpec.describe "Recording labels", type: :system, js: true do
   it "key link from dashboard navigates to key view showing all recordings with that key" do
     visit "/examples"
     expect(page).to have_text("Your browser activity is being recorded.")
+    wait_for_recording
 
     visit "/spectator_sport_dashboard"
     expect(page).to have_text("user_id")
@@ -30,6 +32,7 @@ RSpec.describe "Recording labels", type: :system, js: true do
   it "key/value view links back to key view" do
     visit "/examples"
     expect(page).to have_text("Your browser activity is being recorded.")
+    wait_for_recording
 
     visit "/spectator_sport_dashboard"
     expect(page).to have_text("user_id: 27")
@@ -43,6 +46,7 @@ RSpec.describe "Recording labels", type: :system, js: true do
   it "stores a keyless label from the page and shows it in the dashboard" do
     visit "/examples"
     expect(page).to have_text("Your browser activity is being recorded.")
+    wait_for_recording
 
     visit "/spectator_sport_dashboard"
     expect(page).to have_text("vip")
@@ -55,6 +59,7 @@ RSpec.describe "Recording labels", type: :system, js: true do
   it "strategy: :many stores multiple values for the same key" do
     visit "/examples"
     expect(page).to have_text("Your browser activity is being recorded.")
+    wait_for_recording
 
     expect(SpectatorSport::Label.where(key: "role", value: "admin")).to exist
     expect(SpectatorSport::Label.where(key: "role", value: "moderator")).to exist
@@ -65,9 +70,11 @@ RSpec.describe "Recording labels", type: :system, js: true do
   it "strategy: :one replaces the value when a new value is sent" do
     visit "/examples"
     expect(page).to have_text("Your browser activity is being recorded.")
+    wait_for_recording
 
     visit "/examples/new"
-    expect(page).to have_text("Submit")
+    expect(page).to have_button("Submit")
+    wait_for_recording
 
     session_window = SpectatorSport::Label.where(key: "user_id", value: "28").last.session_window
     expect(session_window.labels.where(key: "user_id").count).to eq(1)
@@ -77,9 +84,11 @@ RSpec.describe "Recording labels", type: :system, js: true do
   it "strategy: :first ignores subsequent values for the same key" do
     visit "/examples"
     expect(page).to have_text("Your browser activity is being recorded.")
+    wait_for_recording
 
     visit "/examples/new"
-    expect(page).to have_text("Submit")
+    expect(page).to have_button("Submit")
+    wait_for_recording
 
     session_window = SpectatorSport::Label.where(key: "first_page", value: "index").last.session_window
     expect(session_window.labels.where(key: "first_page").count).to eq(1)
