@@ -22,11 +22,45 @@
       <% end %>
     </div>
   </div>
-  <% if @tags.any? %>
-    <div class="d-flex justify-content-center pt-2 gap-2">
-      <% @tags.each do |swt| %>
-        <%= link_to swt.tag, tag_path(swt.tag), class: "badge text-bg-secondary text-decoration-none" %>
-      <% end %>
+  <% keyed_labels = @labels.select { |l| l.key.present? }.group_by(&:key) %>
+  <% tag_values = @tags.map(&:tag) %>
+  <% keyless_labels = @labels.select { |l| l.key.nil? }.map(&:value) %>
+  <% if keyed_labels.any? || tag_values.any? || keyless_labels.any? %>
+    <div class="card mt-3">
+      <div class="card-header">Labels</div>
+      <table class="table table-sm mb-0">
+        <thead>
+          <tr>
+            <th>Key</th>
+            <th>Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% keyed_labels.each do |key, labels| %>
+            <tr>
+              <td><%= link_to key, label_key_path(key) %></td>
+              <td>
+                <% labels.each do |label| %>
+                  <%= link_to label.value, label_path(label.key, label.value) %>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+          <% if tag_values.any? || keyless_labels.any? %>
+            <tr>
+              <td>Tags</td>
+              <td>
+                <% tag_values.each do |tv| %>
+                  <%= link_to tv, tag_path(tv) %>
+                <% end %>
+                <% keyless_labels.each do |lv| %>
+                  <%= link_to lv, label_tag_path(lv) %>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
     </div>
   <% end %>
   <div class="d-flex justify-content-center pt-2">

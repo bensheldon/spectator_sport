@@ -1,3 +1,5 @@
+<%= spectator_sport_label_recording("28", key: "user_id", strategy: :one) %>
+<%= spectator_sport_label_recording("new", key: "first_page", strategy: :first) %>
 <%= form_with model: @resource, url: { action: :create }, action: :post do |f| %>
   <%= f.label :name %>
   <%= f.text_field :name %>

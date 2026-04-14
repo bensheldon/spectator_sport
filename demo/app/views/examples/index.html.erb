@@ -1,4 +1,9 @@
 <%= spectator_sport_tag_recording("user-27") %>
+<%= spectator_sport_label_recording("27", key: "user_id", strategy: :one) %>
+<%= spectator_sport_label_recording("admin", key: "role", strategy: :many) %>
+<%= spectator_sport_label_recording("moderator", key: "role", strategy: :many) %>
+<%= spectator_sport_label_recording("index", key: "first_page", strategy: :first) %>
+<%= spectator_sport_label_recording("vip") %>
 <p>This is an example page to demonstrate <strong>Spectator Sport</strong></p>
 <p>Your browser activity is being recorded.</p>
 

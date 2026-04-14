@@ -8,6 +8,11 @@ Capybara.server = :puma, { Silent: true }
 Capybara.disable_animation = true # injects CSP-incompatible CSS and JS
 
 module SystemTestHelpers
+  def wait_for_recording
+    # Allow async label/tag watchers to complete: 100ms JS debounce + network round trip
+    sleep(0.3)
+  end
+
   def wait_for_turbo
     return unless Capybara.current_driver != :rack_test
 
