@@ -8,6 +8,7 @@ Rails.application.routes.draw do
     collection do
       get :error
       get :stopped
+      get :recording_context
     end
   end
 end

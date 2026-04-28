@@ -23,6 +23,9 @@ class ExamplesController < ApplicationController
   end
 
   # This enpoints serves for testing behavior when error page is encountered
+  def recording_context
+  end
+
   def error
     request.env["action_dispatch.show_detailed_exceptions"] = false
     raise ExampleError

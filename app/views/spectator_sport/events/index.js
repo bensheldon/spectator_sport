@@ -323,6 +323,26 @@ function isStopped() {
   return !!document.querySelector(STOP_SELECTOR);
 }
 
+function startCookieIntegration() {
+  function set() {
+    document.cookie = `spectator_sport_window_id=${window.SpectatorSport.context.windowId}; path=/; SameSite=Strict`;
+  }
+  function clear() {
+    document.cookie = `spectator_sport_window_id=; path=/; SameSite=Strict; max-age=0`;
+  }
+  document.addEventListener('spectator-sport:start', set);
+  document.addEventListener('spectator-sport:resume', set);
+  document.addEventListener('spectator-sport:pause', clear);
+}
+
+function startTurboIntegration() {
+  document.addEventListener('spectator-sport:start', function() {
+    document.addEventListener('turbo:before-fetch-request', function(event) {
+      event.detail.fetchOptions.headers['X-Spectator-Sport-Window-Id'] = window.SpectatorSport.context.windowId;
+    });
+  });
+}
+
 const recorder = new Recorder();
 if (!isStopped()) {
   recorder.start();
@@ -337,18 +357,31 @@ labelWatcher.start();
 const stopWatcher = new StopWatcher(recorder);
 stopWatcher.start();
 
+const context = { windowId: recorder.windowId };
+
+window.SpectatorSport = {
+  context,
+};
+
+startCookieIntegration();
+startTurboIntegration();
+
+document.dispatchEvent(new CustomEvent('spectator-sport:start', { detail: { context } }));
+
 window.addEventListener("pageshow", function(_event) {
   log("pageshow");
   if (isStopped()) {
     recorder.stop();
   } else {
     recorder.start();
+    document.dispatchEvent(new CustomEvent('spectator-sport:resume', { detail: { context } }));
   }
 });
 
 window.addEventListener("pagehide", function(_event) {
   log("pagehide");
   recorder.stop();
+  document.dispatchEvent(new CustomEvent('spectator-sport:pause', { detail: { context } }));
 });
 
 document.addEventListener("visibilitychange", function(_event) {
@@ -356,8 +389,10 @@ document.addEventListener("visibilitychange", function(_event) {
   if (document.visibilityState === "visible") {
     if (!isStopped()) {
       recorder.unpause();
+      document.dispatchEvent(new CustomEvent('spectator-sport:resume', { detail: { context } }));
     }
   } else if (document.visibilityState === "hidden") {
     recorder.pause();
+    document.dispatchEvent(new CustomEvent('spectator-sport:pause', { detail: { context } }));
   }
 });
