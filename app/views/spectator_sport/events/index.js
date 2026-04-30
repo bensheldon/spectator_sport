@@ -33,15 +33,34 @@ const RECORDING_TAG_SELECTOR = 'meta[name="spectator-sport-recording-tag"]';
 const RECORDING_LABEL_SELECTOR = 'meta[name="spectator-sport-recording-label"]';
 const STOP_SELECTOR = 'meta[name="spectator-sport-stop"]';
 
-class Recorder {
-  constructor() {
-    this.sessionId = this.getSessionId();
-    this.windowId = this.getWindowId();
+function getSessionId() {
+  const STORAGE_NAME = "spectator_sport_session_id";
+  let id = window.localStorage.getItem(STORAGE_NAME);
+  if (!id) {
+    id = generateRandomId();
+    window.localStorage.setItem(STORAGE_NAME, id);
+  }
+  return id;
+}
 
-    this.events = new Events(this.sessionId, this.windowId);
+function getWindowId() {
+  const STORAGE_NAME = "spectator_sport_window_id";
+  let id = window.sessionStorage.getItem(STORAGE_NAME);
+  if (!id) {
+    id = generateRandomId();
+    window.sessionStorage.setItem(STORAGE_NAME, id);
+  }
+  return id;
+}
+
+class Recorder {
+  constructor(sessionId, windowId) {
+    this.sessionId = sessionId;
+    this.windowId = windowId;
+
+    this.events = new Events(sessionId, windowId);
 
     this.stopRrwebCallback = null; // rrweb's stop function
-    this.refreshIntervalId = null; // interval id to cancel
   }
 
   start() {
@@ -51,19 +70,11 @@ class Recorder {
       });
     }
 
-    if (!this.refreshIntervalId) {
-      this.refreshIntervalId = setInterval(function() {
-        this.events.transmit(false);
-    }.bind(this), POST_INTERVAL_SECONDS * 1000
-      );
-    }
+    this.events.startFlushing();
   }
 
   stop() {
-    if (this.refreshIntervalId) {
-      clearInterval(this.refreshIntervalId);
-      this.refreshIntervalId = null;
-    }
+    this.events.stopFlushing();
 
     if (this.stopRrwebCallback) {
       this.stopRrwebCallback();
@@ -74,36 +85,12 @@ class Recorder {
   }
 
   pause() {
-    if (this.refreshIntervalId) {
-      clearInterval(this.refreshIntervalId);
-      this.refreshIntervalId = null;
-    }
-
+    this.events.stopFlushing();
     this.events.transmit(true);
   }
 
   unpause() {
     this.start();
-  }
-
-  getWindowId() {
-    const WINDOW_ID_STORAGE_NAME = "spectator_sport_window_id";
-    let windowId = window.sessionStorage.getItem(WINDOW_ID_STORAGE_NAME);
-    if (!windowId) {
-      windowId = generateRandomId();
-      window.sessionStorage.setItem(WINDOW_ID_STORAGE_NAME, windowId);
-    }
-    return windowId;
-  }
-
-  getSessionId() {
-    const SESSION_ID_STORAGE_NAME = "spectator_sport_session_id";
-    let sessionId = window.localStorage.getItem(SESSION_ID_STORAGE_NAME);
-    if (!sessionId) {
-      sessionId = generateRandomId();
-      window.localStorage.setItem(SESSION_ID_STORAGE_NAME, sessionId);
-    }
-    return sessionId;
   }
 }
 
@@ -114,6 +101,22 @@ class Events {
 
     this.events = [];
     this.eventBytes = 0;
+    this.flushIntervalId = null;
+  }
+
+  startFlushing() {
+    if (!this.flushIntervalId) {
+      this.flushIntervalId = setInterval(() => {
+        this.transmit(false);
+      }, POST_INTERVAL_SECONDS * 1000);
+    }
+  }
+
+  stopFlushing() {
+    if (this.flushIntervalId) {
+      clearInterval(this.flushIntervalId);
+      this.flushIntervalId = null;
+    }
   }
 
   add(event) {
@@ -323,45 +326,63 @@ function isStopped() {
   return !!document.querySelector(STOP_SELECTOR);
 }
 
-const recorder = new Recorder();
+class PageLifecycleManager {
+  constructor(recorder) {
+    this.recorder = recorder;
+  }
+
+  start() {
+    window.addEventListener("pageshow", this.#onPageShow.bind(this));
+    window.addEventListener("pagehide", this.#onPageHide.bind(this));
+    document.addEventListener("visibilitychange", this.#onVisibilityChange.bind(this));
+  }
+
+  #onPageShow(event) {
+    log("pageshow", event.persisted);
+    if (!event.persisted) return;
+    if (isStopped()) {
+      this.recorder.stop();
+    } else {
+      this.recorder.start();
+    }
+  }
+
+  // Always stop (not pause) on pagehide, even for bfcache (event.persisted=true).
+  // stop() forces rrweb to emit a new full snapshot when the page is restored,
+  // creating a clean recording segment rather than a seamless continuation.
+  #onPageHide(_event) {
+    log("pagehide");
+    this.recorder.stop();
+  }
+
+  #onVisibilityChange() {
+    log("visibilitychange", document.visibilityState);
+    if (document.visibilityState === "visible") {
+      if (!isStopped()) {
+        this.recorder.unpause();
+      }
+    } else if (document.visibilityState === "hidden") {
+      this.recorder.pause();
+    }
+  }
+}
+
+const sessionId = getSessionId();
+const windowId = getWindowId();
+
+const recorder = new Recorder(sessionId, windowId);
 if (!isStopped()) {
   recorder.start();
 }
 
-const tagWatcher = new TagWatcher(recorder.sessionId, recorder.windowId);
+const tagWatcher = new TagWatcher(sessionId, windowId);
 tagWatcher.start();
 
-const labelWatcher = new LabelWatcher(recorder.sessionId, recorder.windowId);
+const labelWatcher = new LabelWatcher(sessionId, windowId);
 labelWatcher.start();
 
 const stopWatcher = new StopWatcher(recorder);
 stopWatcher.start();
 
-window.addEventListener("pageshow", function(event) {
-  log("pageshow", event.persisted);
-  if (!event.persisted) return;
-  if (isStopped()) {
-    recorder.stop();
-  } else {
-    recorder.start();
-  }
-});
-
-// Always stop (not pause) on pagehide, even for bfcache (event.persisted=true).
-// stop() forces rrweb to emit a new full snapshot when the page is restored,
-// creating a clean recording segment rather than a seamless continuation.
-window.addEventListener("pagehide", function(_event) {
-  log("pagehide");
-  recorder.stop();
-});
-
-document.addEventListener("visibilitychange", function(_event) {
-  log("visibilitychange", document.visibilityState);
-  if (document.visibilityState === "visible") {
-    if (!isStopped()) {
-      recorder.unpause();
-    }
-  } else if (document.visibilityState === "hidden") {
-    recorder.pause();
-  }
-});
+const lifecycleManager = new PageLifecycleManager(recorder);
+lifecycleManager.start();
