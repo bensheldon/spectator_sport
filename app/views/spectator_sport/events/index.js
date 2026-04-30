@@ -79,7 +79,7 @@ class Recorder {
       this.refreshIntervalId = null;
     }
 
-    this.events.transmit();
+    this.events.transmit(true);
   }
 
   unpause() {
@@ -337,8 +337,9 @@ labelWatcher.start();
 const stopWatcher = new StopWatcher(recorder);
 stopWatcher.start();
 
-window.addEventListener("pageshow", function(_event) {
-  log("pageshow");
+window.addEventListener("pageshow", function(event) {
+  log("pageshow", event.persisted);
+  if (!event.persisted) return;
   if (isStopped()) {
     recorder.stop();
   } else {
@@ -346,6 +347,9 @@ window.addEventListener("pageshow", function(_event) {
   }
 });
 
+// Always stop (not pause) on pagehide, even for bfcache (event.persisted=true).
+// stop() forces rrweb to emit a new full snapshot when the page is restored,
+// creating a clean recording segment rather than a seamless continuation.
 window.addEventListener("pagehide", function(_event) {
   log("pagehide");
   recorder.stop();
