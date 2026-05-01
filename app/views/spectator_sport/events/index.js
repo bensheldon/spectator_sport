@@ -364,7 +364,7 @@ class PageLifecycleManager {
       this.recorder.stop();
     } else {
       this.recorder.start();
-      document.dispatchEvent(new CustomEvent('spectator-sport:resume', { detail: { context: window.SpectatorSport.context } }));
+      document.dispatchEvent(new CustomEvent('spectator-sport:resume', { detail: window.SpectatorSport.context }));
     }
   }
 
@@ -374,7 +374,7 @@ class PageLifecycleManager {
   #onPageHide(_event) {
     log("pagehide");
     this.recorder.stop();
-    document.dispatchEvent(new CustomEvent('spectator-sport:pause', { detail: { context: window.SpectatorSport.context } }));
+    document.dispatchEvent(new CustomEvent('spectator-sport:pause', { detail: window.SpectatorSport.context }));
   }
 
   #onVisibilityChange() {
@@ -382,11 +382,11 @@ class PageLifecycleManager {
     if (document.visibilityState === "visible") {
       if (!isStopped()) {
         this.recorder.unpause();
-        document.dispatchEvent(new CustomEvent('spectator-sport:resume', { detail: { context: window.SpectatorSport.context } }));
+        document.dispatchEvent(new CustomEvent('spectator-sport:resume', { detail: window.SpectatorSport.context }));
       }
     } else if (document.visibilityState === "hidden") {
       this.recorder.pause();
-      document.dispatchEvent(new CustomEvent('spectator-sport:pause', { detail: { context: window.SpectatorSport.context } }));
+      document.dispatchEvent(new CustomEvent('spectator-sport:pause', { detail: window.SpectatorSport.context }));
     }
   }
 }
@@ -417,7 +417,7 @@ window.SpectatorSport = {
 startCookieIntegration();
 startTurboIntegration();
 
-document.dispatchEvent(new CustomEvent('spectator-sport:start', { detail: { context } }));
+document.dispatchEvent(new CustomEvent('spectator-sport:start', { detail: context }));
 
 const lifecycleManager = new PageLifecycleManager(recorder);
 lifecycleManager.start();

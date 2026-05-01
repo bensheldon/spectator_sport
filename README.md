@@ -143,12 +143,12 @@ Spectator Sport also dispatches events on `document` when the recording state ch
 | `spectator-sport:pause` | Tab hidden or page unloading |
 | `spectator-sport:resume` | Tab visible or page shown (including bfcache restore) |
 
-All events include `{ context: { windowId } }` in their `detail`. Use these to integrate with custom fetch libraries or navigation frameworks:
+All events include `{ windowId }` in their `detail`. Use these to integrate with custom fetch libraries or navigation frameworks:
 
 ```javascript
-document.addEventListener('spectator-sport:start', ({ detail: { context } }) => {
+document.addEventListener('spectator-sport:start', ({ detail: { windowId } }) => {
   MyRouter.beforeEach(() => {
-    MyHttp.defaultHeaders['X-Recording-Id'] = context.windowId;
+    MyHttp.defaultHeaders['X-Recording-Id'] = windowId;
   });
 });
 ```
