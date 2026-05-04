@@ -15,4 +15,12 @@ RSpec.describe "Recording tags", type: :system, js: true do
     expect(page).to have_text("Recordings tagged: user-27")
     expect(page).to have_css("table")
   end
+
+  it "transmits tags on page navigation without waiting for the flush interval" do
+    visit "/examples"
+    expect(page).to have_text("Your browser activity is being recorded.")
+    # Navigate away immediately (no wait_for_recording) to exercise the keepalive path
+    visit "/spectator_sport_dashboard"
+    expect(page).to have_text("user-27", wait: 3)
+  end
 end
