@@ -216,18 +216,14 @@ class Events {
     if (this.tags.has(signedTag)) return;
     this.tags.add(signedTag);
     this.payloadBytes += lengthInUtf8Bytes(JSON.stringify(signedTag));
-    if (this.payloadBytes > KEEPALIVE_BYTE_LIMIT) {
-      this.debouncedTransmit();
-    }
+    this.debouncedTransmit();
   }
 
   addLabel(signedLabel) {
     if (this.labels.has(signedLabel)) return;
     this.labels.add(signedLabel);
     this.payloadBytes += lengthInUtf8Bytes(JSON.stringify(signedLabel));
-    if (this.payloadBytes > KEEPALIVE_BYTE_LIMIT) {
-      this.debouncedTransmit();
-    }
+    this.debouncedTransmit();
   }
 
   transmit(keepalive = false) {
