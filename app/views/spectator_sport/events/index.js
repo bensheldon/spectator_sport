@@ -182,7 +182,10 @@ class Events {
     this.windowId = windowId;
 
     this.events = [];
-    this.eventBytes = 0;
+    this.tags = new Set();
+    this.labels = new Set();
+
+    this.payloadBytes = 0;
     this.flushIntervalId = null;
   }
 
@@ -202,31 +205,53 @@ class Events {
   }
 
   add(event) {
-    const serializedEvent = JSON.stringify(event);
-    const newEventBytes = lengthInUtf8Bytes(serializedEvent);
-
     this.events.push(event);
-    this.eventBytes = this.eventBytes + newEventBytes;
+    this.payloadBytes += lengthInUtf8Bytes(JSON.stringify(event));
+    if (this.payloadBytes > KEEPALIVE_BYTE_LIMIT) {
+      this.debouncedTransmit();
+    }
+  }
 
-    if (this.eventBytes > KEEPALIVE_BYTE_LIMIT) {
-      this.events.push(event);
+  addTag(signedTag) {
+    if (this.tags.has(signedTag)) return;
+    this.tags.add(signedTag);
+    this.payloadBytes += lengthInUtf8Bytes(JSON.stringify(signedTag));
+    if (this.payloadBytes > KEEPALIVE_BYTE_LIMIT) {
+      this.debouncedTransmit();
+    }
+  }
+
+  addLabel(signedLabel) {
+    if (this.labels.has(signedLabel)) return;
+    this.labels.add(signedLabel);
+    this.payloadBytes += lengthInUtf8Bytes(JSON.stringify(signedLabel));
+    if (this.payloadBytes > KEEPALIVE_BYTE_LIMIT) {
       this.debouncedTransmit();
     }
   }
 
   transmit(keepalive = false) {
-    if (this.events.length === 0) {
-      return
+    if (this.events.length === 0 && this.tags.size === 0 && this.labels.size === 0) {
+      return;
     }
 
-    const body = JSON.stringify({
-      sessionId: this.sessionId,
-      windowId: this.windowId,
-      events: this.events
-    });
+    const events = [...this.events];
+    const tags = [...this.tags];
+    const labels = [...this.labels];
+    this.events = [];
+    this.tags = new Set();
+    this.labels = new Set();
+    this.payloadBytes = 0;
 
-    this.events.length = 0;
-    this.eventBytes = 0;
+    const payload = { sessionId: this.sessionId, windowId: this.windowId, events };
+    if (tags.length > 0) payload.tags = tags;
+    if (labels.length > 0) payload.labels = labels;
+
+    const body = JSON.stringify(payload);
+
+    if (keepalive && lengthInUtf8Bytes(body) > KEEPALIVE_BYTE_LIMIT) {
+      keepalive = false;
+    }
 
     fetch(POST_URL, {
       method: 'POST',
@@ -251,18 +276,14 @@ class Events {
 }
 
 class TagWatcher {
-  constructor(sessionId, windowId) {
-    this.sessionId = sessionId;
-    this.windowId = windowId;
-    this.seenTags = new Set();
-    this.pendingTags = [];
-    this.debounceTimeout = null;
+  constructor(events) {
+    this.events = events;
     this.observer = null;
   }
 
   start() {
     document.querySelectorAll(RECORDING_TAG_SELECTOR).forEach(el => {
-      this.enqueue(el.content);
+      this.events.addTag(el.content);
     });
 
     this.observer = new MutationObserver((mutations) => {
@@ -270,59 +291,27 @@ class TagWatcher {
         for (const node of mutation.addedNodes) {
           if (node.nodeType !== Node.ELEMENT_NODE) continue;
           if (node.matches(RECORDING_TAG_SELECTOR)) {
-            this.enqueue(node.content);
+            this.events.addTag(node.content);
           }
           node.querySelectorAll(RECORDING_TAG_SELECTOR).forEach(el => {
-            this.enqueue(el.content);
+            this.events.addTag(el.content);
           });
         }
       }
     });
     this.observer.observe(document.documentElement, { childList: true, subtree: true });
   }
-
-  enqueue(signedTag) {
-    if (this.seenTags.has(signedTag)) return;
-    this.seenTags.add(signedTag);
-    this.pendingTags.push(signedTag);
-    this.debouncedFlush();
-  }
-
-  debouncedFlush() {
-    if (!this.debounceTimeout) {
-      this.debounceTimeout = setTimeout(() => {
-        this.debounceTimeout = null;
-        this.flush();
-      }, 100);
-    }
-  }
-
-  flush() {
-    if (this.pendingTags.length === 0) return;
-    const tags = this.pendingTags.splice(0);
-    fetch(POST_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessionId: this.sessionId, windowId: this.windowId, events: [], tags }),
-    }).catch((error) => {
-      console.error(error);
-    });
-  }
 }
 
 class LabelWatcher {
-  constructor(sessionId, windowId) {
-    this.sessionId = sessionId;
-    this.windowId = windowId;
-    this.seenLabels = new Set();
-    this.pendingLabels = [];
-    this.debounceTimeout = null;
+  constructor(events) {
+    this.events = events;
     this.observer = null;
   }
 
   start() {
     document.querySelectorAll(RECORDING_LABEL_SELECTOR).forEach(el => {
-      this.enqueue(el.content);
+      this.events.addLabel(el.content);
     });
 
     this.observer = new MutationObserver((mutations) => {
@@ -330,43 +319,15 @@ class LabelWatcher {
         for (const node of mutation.addedNodes) {
           if (node.nodeType !== Node.ELEMENT_NODE) continue;
           if (node.matches(RECORDING_LABEL_SELECTOR)) {
-            this.enqueue(node.content);
+            this.events.addLabel(node.content);
           }
           node.querySelectorAll(RECORDING_LABEL_SELECTOR).forEach(el => {
-            this.enqueue(el.content);
+            this.events.addLabel(el.content);
           });
         }
       }
     });
     this.observer.observe(document.documentElement, { childList: true, subtree: true });
-  }
-
-  enqueue(signedLabel) {
-    if (this.seenLabels.has(signedLabel)) return;
-    this.seenLabels.add(signedLabel);
-    this.pendingLabels.push(signedLabel);
-    this.debouncedFlush();
-  }
-
-  debouncedFlush() {
-    if (!this.debounceTimeout) {
-      this.debounceTimeout = setTimeout(() => {
-        this.debounceTimeout = null;
-        this.flush();
-      }, 100);
-    }
-  }
-
-  flush() {
-    if (this.pendingLabels.length === 0) return;
-    const labels = this.pendingLabels.splice(0);
-    fetch(POST_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessionId: this.sessionId, windowId: this.windowId, events: [], labels }),
-    }).catch((error) => {
-      console.error(error);
-    });
   }
 }
 
@@ -457,10 +418,10 @@ if (!isStopped()) {
   recorder.start();
 }
 
-const tagWatcher = new TagWatcher(sessionId, windowId);
+const tagWatcher = new TagWatcher(recorder.events);
 tagWatcher.start();
 
-const labelWatcher = new LabelWatcher(sessionId, windowId);
+const labelWatcher = new LabelWatcher(recorder.events);
 labelWatcher.start();
 
 const stopWatcher = new StopWatcher(recorder);
