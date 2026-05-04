@@ -38,7 +38,7 @@ To install Spectator Sport in your Rails application:
     bundle add spectator_sport
     ```
 2. Install Spectator Sport in your application. _🚧 This will change on the path to v1._ Explore the `/demo` app as live example:
-    - Create database migrations with `bin/rails g spectator_sport:install:migrations`. Apply migrations with `bin/rails db:prepare`
+    - Create database migrations with `bin/rails spectator_sport:install:migrations`. Apply migrations with `bin/rails db:prepare`
     - Mount the recorder API in your application's routes with `mount SpectatorSport::Engine, at: "/spectator_sport, as: :spectator_sport"`
     - Add the `spectator_sport_script_tags` helper to the bottom of the `<head>` of `layout/application.rb`. Example:
         ```erb
