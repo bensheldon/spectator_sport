@@ -10,6 +10,8 @@ export default class extends Controller {
   static targets = [ "player", "events", "linkUrl" ]
 
   connect() {
+    if (this.eventsValue.length === 0) return;
+
     this.player = new Player({
       target: this.playerTarget,
       props: {
