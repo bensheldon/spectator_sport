@@ -16,17 +16,14 @@ RSpec.describe "Recording labels", type: :system, js: true do
     expect(page).to have_css("table")
   end
 
-  it "key link from dashboard navigates to key view showing all recordings with that key" do
+  it "displays keyed labels as a single combined 'key: value' link in the dashboard" do
     visit "/examples"
     expect(page).to have_text("Your browser activity is being recorded.")
     wait_for_recording
 
     visit "/spectator_sport_dashboard"
-    expect(page).to have_text("user_id")
-
-    first(:link, "user_id").click
-    expect(page).to have_text("Recordings with label key: user_id")
-    expect(page).to have_css("table")
+    expect(page).to have_link("user_id: 27")
+    expect(page).not_to have_link("user_id", exact: true)
   end
 
   it "key/value view links back to key view" do
