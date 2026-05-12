@@ -24,6 +24,10 @@ RSpec.describe "Recording labels", type: :system, js: true do
     visit "/spectator_sport_dashboard"
     expect(page).to have_link("user_id: 27")
     expect(page).not_to have_link("user_id", exact: true)
+
+    first(:link, "user_id: 27").click
+    expect(page).to have_text("Recordings labeled: user_id: 27")
+    expect(page).to have_css("table")
   end
 
   it "key/value view links back to key view" do
