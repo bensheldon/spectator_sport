@@ -27,7 +27,6 @@ describe SpectatorSport::Dashboard::SessionWindowsController, type: :controller 
       expect(response.body).to include("user_id")
       expect(response.body).to include("42")
     end
-
   end
 
   describe "DELETE #destroy" do
