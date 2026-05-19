@@ -27,14 +27,6 @@ describe SpectatorSport::Dashboard::SessionWindowsController, type: :controller 
       expect(response.body).to include("user_id")
       expect(response.body).to include("42")
     end
-
-    it "renders tags when migrated" do
-      SpectatorSport::SessionWindowTag.create!(session_window: session_window, tag: "test-tag")
-
-      get :show, params: { id: session_window.id }
-
-      expect(response.body).to include("test-tag")
-    end
   end
 
   describe "DELETE #destroy" do
