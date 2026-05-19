@@ -2,8 +2,9 @@ module SpectatorSport
   class Event < ApplicationRecord
     PAGE_LIMIT = 1_000
 
-    belongs_to :session
-    belongs_to :session_window
+    belongs_to :session, optional: true
+    belongs_to :session_window, optional: true
+    belongs_to :recording, optional: true
 
     scope :page_after, ->(event) { (event ? where("(created_at, id) > (?, ?)", event.created_at, event.id) : self).order(created_at: :asc, id: :asc).limit(PAGE_LIMIT) }
 

@@ -4,8 +4,7 @@ require "rails_helper"
 
 RSpec.describe "Player timestamp link", type: :system, js: true do
   it "generates a timestamp link that loads the recording at the correct time" do
-    session = SpectatorSport::Session.create!(secure_id: "test-session")
-    session_window = SpectatorSport::SessionWindow.create!(session: session, secure_id: "test-window")
+    recording = SpectatorSport::Recording.create!(secure_id: "test-recording")
 
     base_time = 1_000_000_000_000 # ms epoch
 
@@ -32,10 +31,10 @@ RSpec.describe "Player timestamp link", type: :system, js: true do
       },
       { type: 3, data: { source: 0, texts: [], attributes: [], removes: [], adds: [] }, timestamp: base_time + 10_000 }
     ].each do |event_data|
-      SpectatorSport::Event.create!(session: session, session_window: session_window, event_data: event_data)
+      SpectatorSport::Event.create!(recording: recording, event_data: event_data)
     end
 
-    visit spectator_sport_dashboard.session_window_path(session_window)
+    visit spectator_sport_dashboard.recording_path(recording)
 
     # Wait for the player to play and update the URL input with a timestamp.
     # Uses evaluate_script (no cached node reference) to avoid Ferrum::NodeNotFoundError

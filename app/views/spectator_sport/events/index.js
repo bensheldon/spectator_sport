@@ -115,6 +115,8 @@ const RECORDING_TAG_SELECTOR = 'meta[name="spectator-sport-recording-tag"]';
 const RECORDING_LABEL_SELECTOR = 'meta[name="spectator-sport-recording-label"]';
 const STOP_SELECTOR = 'meta[name="spectator-sport-stop"]';
 
+// sessionId is retained for backward compatibility with older servers that
+// store events under a Session/SessionWindow pair. New servers key on recordingId.
 function getSessionId() {
   const STORAGE_NAME = "spectator_sport_session_id";
   let id = window.localStorage.getItem(STORAGE_NAME);
@@ -125,22 +127,26 @@ function getSessionId() {
   return id;
 }
 
-function getWindowId() {
-  const STORAGE_NAME = "spectator_sport_window_id";
-  let id = window.sessionStorage.getItem(STORAGE_NAME);
+function getRecordingId() {
+  const LEGACY_STORAGE_NAME = "spectator_sport_window_id";
+  const STORAGE_NAME = "spectator_sport_recording_id";
+  let id = window.sessionStorage.getItem(LEGACY_STORAGE_NAME);
   if (!id) {
-    id = generateRandomId();
-    window.sessionStorage.setItem(STORAGE_NAME, id);
+    id = window.sessionStorage.getItem(STORAGE_NAME);
+    if (!id) {
+      id = generateRandomId();
+      window.sessionStorage.setItem(STORAGE_NAME, id);
+    }
   }
   return id;
 }
 
 class Recorder {
-  constructor(sessionId, windowId) {
+  constructor(sessionId, recordingId) {
     this.sessionId = sessionId;
-    this.windowId = windowId;
+    this.recordingId = recordingId;
 
-    this.events = new Events(sessionId, windowId);
+    this.events = new Events(sessionId, recordingId);
 
     this.stopRrwebCallback = null; // rrweb's stop function
   }
@@ -177,9 +183,9 @@ class Recorder {
 }
 
 class Events {
-  constructor(sessionId, windowId) {
+  constructor(sessionId, recordingId) {
     this.sessionId = sessionId;
-    this.windowId = windowId;
+    this.recordingId = recordingId;
 
     this.events = [];
     this.tags = new Set();
@@ -239,7 +245,8 @@ class Events {
     this.labels = new Set();
     this.payloadBytes = 0;
 
-    const payload = { sessionId: this.sessionId, windowId: this.windowId, events };
+    // sessionId is sent for backward compatibility with older servers; new servers key on recordingId.
+    const payload = { sessionId: this.sessionId, recordingId: this.recordingId, events };
     if (tags.length > 0) payload.tags = tags;
     if (labels.length > 0) payload.labels = labels;
 
@@ -407,9 +414,9 @@ class PageLifecycleManager {
 }
 
 const sessionId = getSessionId();
-const windowId = getWindowId();
+const recordingId = getRecordingId();
 
-const recorder = new Recorder(sessionId, windowId);
+const recorder = new Recorder(sessionId, recordingId);
 if (!isStopped()) {
   recorder.start();
 }

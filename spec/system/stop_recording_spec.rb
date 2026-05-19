@@ -7,7 +7,7 @@ RSpec.describe "Stop recording", type: :system, js: true do
     expect {
       visit "/examples/stopped"
       visit "/spectator_sport_dashboard"
-    }.not_to change { SpectatorSport::SessionWindow.count }
+    }.not_to change { SpectatorSport::Recording.count }
   end
 
   it "resumes recording after navigating away from a stopped page" do
@@ -18,6 +18,6 @@ RSpec.describe "Stop recording", type: :system, js: true do
     visit "/spectator_sport_dashboard"
     expect(page).to have_text("Spectator Sport")
 
-    expect(SpectatorSport::SessionWindow.count).to be > 0
+    expect(SpectatorSport::Recording.count).to be > 0
   end
 end
