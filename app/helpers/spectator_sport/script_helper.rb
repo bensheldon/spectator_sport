@@ -5,7 +5,7 @@ module SpectatorSport
     end
 
     def spectator_sport_tag_recording(tag_value)
-      ActiveSupport::Deprecation.new.warn(
+      SpectatorSport.deprecator.warn(
         "`spectator_sport_tag_recording` is deprecated and will be removed in a future version. " \
         "Use `spectator_sport_label_recording` instead."
       )

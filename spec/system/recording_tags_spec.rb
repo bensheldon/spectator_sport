@@ -12,7 +12,7 @@ RSpec.describe "Recording tags", type: :system, js: true do
     expect(page).to have_text("user-27")
 
     first(:link, "user-27").click
-    expect(page).to have_text("Recordings tagged: user-27")
+    expect(page).to have_text("Recordings labeled: user-27")
     expect(page).to have_css("table")
   end
 
