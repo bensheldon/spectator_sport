@@ -5,8 +5,11 @@ module SpectatorSport
     end
 
     def spectator_sport_tag_recording(tag_value)
-      signed = Rails.application.message_verifier(:spectator_sport_tag_recording).generate(tag_value)
-      tag.meta(name: "spectator-sport-recording-tag", content: signed)
+      ActiveSupport::Deprecation.new.warn(
+        "`spectator_sport_tag_recording` is deprecated and will be removed in a future version. " \
+        "Use `spectator_sport_label_recording` instead."
+      )
+      spectator_sport_label_recording(tag_value)
     end
 
     def spectator_sport_label_recording(value, key: nil, strategy: :many)

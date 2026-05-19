@@ -27,9 +27,8 @@
     </div>
   </div>
   <% keyed_labels = @labels.select { |l| l.key.present? }.group_by(&:key) %>
-  <% tag_values = @tags.map(&:tag) %>
   <% keyless_labels = @labels.select { |l| l.key.nil? }.map(&:value) %>
-  <% if keyed_labels.any? || tag_values.any? || keyless_labels.any? %>
+  <% if keyed_labels.any? || keyless_labels.any? %>
     <div class="card mt-3">
       <div class="card-header">Labels</div>
       <table class="table table-sm mb-0">
@@ -50,13 +49,10 @@
               </td>
             </tr>
           <% end %>
-          <% if tag_values.any? || keyless_labels.any? %>
+          <% if keyless_labels.any? %>
             <tr>
-              <td>Tags</td>
+              <td></td>
               <td>
-                <% tag_values.each do |tv| %>
-                  <%= link_to tv, tag_path(tv) %>
-                <% end %>
                 <% keyless_labels.each do |lv| %>
                   <%= link_to lv, label_tag_path(lv) %>
                 <% end %>

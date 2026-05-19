@@ -5,9 +5,6 @@
     <tr>
       <th>Recording</th>
       <th>Session ID</th>
-      <% if SpectatorSport::SessionWindowTag.migrated? %>
-        <th>Tags</th>
-      <% end %>
       <% if SpectatorSport::Label.migrated? %>
         <th>Labels</th>
       <% end %>
@@ -21,13 +18,6 @@
       <tr>
         <td><%= link_to "Session (Window ##{session_window.id})", session_window_path(session_window.id) %></td>
         <td><%= session_window.session_id %></td>
-        <% if SpectatorSport::SessionWindowTag.migrated? %>
-          <td>
-            <% session_window.session_window_tags.each do |swt| %>
-              <%= link_to swt.tag, tag_path(swt.tag) %>
-            <% end %>
-          </td>
-        <% end %>
         <% if SpectatorSport::Label.migrated? %>
           <td>
             <% session_window.labels.each do |swl| %>
