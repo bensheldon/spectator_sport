@@ -10,13 +10,15 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_13_000001) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_19_000000) do
   create_table "spectator_sport_events", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.json "event_data", null: false
-    t.integer "session_id", null: false
+    t.integer "recording_id"
+    t.integer "session_id"
     t.integer "session_window_id"
     t.datetime "updated_at", null: false
+    t.index [ "recording_id" ], name: "index_spectator_sport_events_on_recording_id"
     t.index [ "session_id", "created_at" ], name: "index_spectator_sport_events_on_session_id_and_created_at"
     t.index [ "session_id" ], name: "index_spectator_sport_events_on_session_id"
     t.index [ "session_window_id", "created_at" ], name: "idx_on_session_window_id_created_at_f1aab0a880"
@@ -27,13 +29,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_13_000001) do
     t.datetime "created_at", null: false
     t.string "key"
     t.boolean "multiple", default: true, null: false
-    t.integer "session_window_id", null: false
+    t.integer "recording_id"
+    t.integer "session_window_id"
     t.datetime "updated_at", null: false
     t.string "value", null: false
     t.index [ "key", "value" ], name: "index_spectator_sport_labels_on_key_and_value"
+    t.index [ "recording_id" ], name: "index_spectator_sport_labels_on_recording_id"
+    t.index [ "recording_id", "key" ], name: "index_labels_unique_singular_key_per_recording", unique: true, where: "multiple = false AND key IS NOT NULL"
     t.index [ "session_window_id", "key", "value" ], name: "idx_on_session_window_id_key_value_98301751dd"
     t.index [ "session_window_id", "key" ], name: "index_labels_unique_singular_key_per_window", unique: true, where: "multiple = false AND key IS NOT NULL"
     t.index [ "session_window_id" ], name: "index_spectator_sport_labels_on_session_window_id"
+  end
+
+  create_table "spectator_sport_recordings", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "secure_id", null: false
+    t.datetime "updated_at", null: false
   end
 
   create_table "spectator_sport_session_window_tags", force: :cascade do |t|

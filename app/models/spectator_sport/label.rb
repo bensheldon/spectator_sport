@@ -2,7 +2,8 @@ module SpectatorSport
   class Label < ApplicationRecord
     self.table_name = "spectator_sport_labels"
 
-    belongs_to :session_window
+    belongs_to :session_window, optional: true
+    belongs_to :recording, optional: true
     validates :value, presence: true
 
     def self.migrated?
@@ -12,7 +13,10 @@ module SpectatorSport
       false
     end
 
-    def self.record(session_window:, value:, key: nil, strategy: "many")
+    def self.record(recording: nil, session_window: nil, value:, key: nil, strategy: "many")
+      owner = recording || session_window
+      owner_attrs = recording ? { recording: recording } : { session_window: session_window }
+
       value = value.to_s.presence
       key = key.to_s.presence
       strategy = key ? strategy.to_s : "many"
@@ -20,28 +24,28 @@ module SpectatorSport
 
       case strategy
       when "first"
-        mysql_lock(session_window) do
-          find_or_create_by(session_window: session_window, key: key) do |l|
+        mysql_lock(owner) do
+          find_or_create_by(**owner_attrs, key: key) do |l|
             l.value = value
             l.multiple = false
           end
         end
       when "one"
-        mysql_lock(session_window) do
-          label = find_or_initialize_by(session_window: session_window, key: key)
+        mysql_lock(owner) do
+          label = find_or_initialize_by(**owner_attrs, key: key)
           label.assign_attributes(value: value, multiple: false)
           label.save
         end
       else # "many"
-        find_or_create_by(session_window: session_window, key: key, value: value) do |l|
+        find_or_create_by(**owner_attrs, key: key, value: value) do |l|
           l.multiple = true
         end
       end
     end
 
-    def self.mysql_lock(session_window, &block)
+    def self.mysql_lock(lockable, &block)
       if connection.adapter_name =~ /mysql/i
-        session_window.with_lock(&block)
+        lockable.with_lock(&block)
       else
         block.call
       end

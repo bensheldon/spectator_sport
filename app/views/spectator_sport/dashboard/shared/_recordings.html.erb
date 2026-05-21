@@ -1,0 +1,50 @@
+<div class="card">
+  <table class="table">
+    <caption class="visually-hidden">List of recordings</caption>
+    <thead>
+    <tr>
+      <th>Recording</th>
+      <% if SpectatorSport::Label.migrated? %>
+        <th>Labels</th>
+      <% end %>
+      <th>Updated</th>
+      <th>Created</th>
+      <th>Actions</th>
+    </tr>
+    </thead>
+    <tbody>
+    <% recordings.each do |recording| %>
+      <tr>
+        <td><%= link_to "Recording ##{recording.id}", recording_path(recording.id) %></td>
+        <% if SpectatorSport::Label.migrated? %>
+          <td>
+            <% recording.labels.each do |label| %>
+              <% if label.key.present? %>
+                <%= link_to label.display, label_path(label.key, label.value) %>
+              <% else %>
+                <%= link_to label.value, label_tag_path(label.value) %>
+              <% end %>
+            <% end %>
+          </td>
+        <% end %>
+        <td><%= tag.time(time_ago_in_words(recording.updated_at), datetime: recording.updated_at, title: recording.updated_at) %>
+        <td><%= tag.time(time_ago_in_words(recording.created_at), datetime: recording.created_at, title: recording.created_at) %>
+        <td>
+          <button class="d-flex align-items-center btn btn-sm" type="button" id="<%= dom_id(recording, :actions) %>" data-bs-toggle="dropdown" aria-expanded="false">
+            <%= render_icon "dots" %>
+            <span class="visually-hidden">Actions</span>
+          </button>
+          <ul class="dropdown-menu shadow" aria-labelledby="<%= dom_id(recording, :actions) %>">
+            <li>
+              <%= link_to recording_path(recording.id), method: :put, class: "dropdown-item", title: "Destroy", data: { "turbo-method": :delete, "turbo-confirm": "Destroy this recording?" } do %>
+                <%= render_icon "eject" %>
+                Destroy
+              <% end %>
+            </li>
+          </ul>
+        </td>
+      </tr>
+    <% end %>
+    </tbody>
+  </table>
+</div>

@@ -1,6 +1,12 @@
 module SpectatorSport
   module Dashboard
     class SessionWindowsController < ApplicationController
+      def index
+        @session_windows = SessionWindow.order(:created_at).limit(50).reverse_order
+        @session_windows = @session_windows.includes(:session_window_tags) if SpectatorSport::SessionWindowTag.migrated?
+        @session_windows = @session_windows.includes(:labels) if SpectatorSport::Label.migrated?
+      end
+
       def show
         @session_window = SessionWindow.find(params[:id])
         @events = @session_window.events.page_after(nil)

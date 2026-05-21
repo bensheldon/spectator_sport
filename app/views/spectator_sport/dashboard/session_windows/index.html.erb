@@ -1,0 +1,7 @@
+<div class="container my-3">
+  <% if @session_windows.to_a.any? %>
+    <%= render "spectator_sport/dashboard/shared/session_windows", session_windows: @session_windows %>
+  <% else %>
+    <em>No recordings found.</em>
+  <% end %>
+</div>

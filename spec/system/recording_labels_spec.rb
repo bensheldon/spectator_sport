@@ -64,8 +64,8 @@ RSpec.describe "Recording labels", type: :system, js: true do
 
     expect(SpectatorSport::Label.where(key: "role", value: "admin")).to exist
     expect(SpectatorSport::Label.where(key: "role", value: "moderator")).to exist
-    session_window = SpectatorSport::Label.where(key: "role", value: "admin").last.session_window
-    expect(session_window.labels.where(key: "role").count).to eq(2)
+    recording = SpectatorSport::Label.where(key: "role", value: "admin").last.recording
+    expect(recording.labels.where(key: "role").count).to eq(2)
   end
 
   it "strategy: :one replaces the value when a new value is sent" do
@@ -77,9 +77,9 @@ RSpec.describe "Recording labels", type: :system, js: true do
     expect(page).to have_button("Submit")
     wait_for_recording
 
-    session_window = SpectatorSport::Label.where(key: "user_id", value: "28").last.session_window
-    expect(session_window.labels.where(key: "user_id").count).to eq(1)
-    expect(session_window.labels.where(key: "user_id", value: "27")).not_to exist
+    recording = SpectatorSport::Label.where(key: "user_id", value: "28").last.recording
+    expect(recording.labels.where(key: "user_id").count).to eq(1)
+    expect(recording.labels.where(key: "user_id", value: "27")).not_to exist
   end
 
   it "strategy: :first ignores subsequent values for the same key" do
@@ -91,9 +91,9 @@ RSpec.describe "Recording labels", type: :system, js: true do
     expect(page).to have_button("Submit")
     wait_for_recording
 
-    session_window = SpectatorSport::Label.where(key: "first_page", value: "index").last.session_window
-    expect(session_window.labels.where(key: "first_page").count).to eq(1)
-    expect(session_window.labels.where(key: "first_page", value: "index")).to exist
-    expect(session_window.labels.where(key: "first_page", value: "new")).not_to exist
+    recording = SpectatorSport::Label.where(key: "first_page", value: "index").last.recording
+    expect(recording.labels.where(key: "first_page").count).to eq(1)
+    expect(recording.labels.where(key: "first_page", value: "index")).to exist
+    expect(recording.labels.where(key: "first_page", value: "new")).not_to exist
   end
 end

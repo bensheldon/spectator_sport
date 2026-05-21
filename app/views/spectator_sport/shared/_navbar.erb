@@ -13,7 +13,12 @@
       <span class="navbar-toggler-icon"></span>
     </button>
 
-    <div class="collapse navbar-collapse justify-content-end" id="navbarSupportedContent">
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item">
+          <%= link_to "Windows (deprecated)", session_windows_path, class: "nav-link#{" active" if controller_name == "session_windows"}" %>
+        </li>
+      </ul>
       <ul class="navbar-nav">
         <li class="nav-item d-none d-lg-flex">
           <span class="navbar-text">

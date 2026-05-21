@@ -1,6 +1,12 @@
 SpectatorSport::Dashboard::Engine.routes.draw do
-  root to: "dashboards#index"
-  resources :session_windows, only: [ :show, :destroy ] do
+  root to: "recordings#index"
+  resources :recordings, only: [ :show, :destroy ] do
+    member do
+      get :details
+      get :stream_events
+    end
+  end
+  resources :session_windows, only: [ :index, :show, :destroy ] do
     member do
       get :details
       get :events

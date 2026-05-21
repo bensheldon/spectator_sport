@@ -6,19 +6,61 @@ module SpectatorSport
     end
 
     def create
-      data = if params.key?(:sessionId) && params.key?(:windowId) && params.key?(:events)
-        params.slice(:sessionId, :windowId, :events, :tags, :labels).stringify_keys
+      data = if params.key?(:events) && (params.key?(:recordingId) || params.key?(:windowId))
+        params.slice(:sessionId, :recordingId, :windowId, :events, :tags, :labels).stringify_keys
       else
         # beacon sends JSON in the request body
-        JSON.parse(request.body.read).slice("sessionId", "windowId", "events", "tags", "labels")
+        JSON.parse(request.body.read).slice("sessionId", "recordingId", "windowId", "events", "tags", "labels")
       end
 
-      session_secure_id = data["sessionId"]
-      window_secure_id = data["windowId"]
+      # `windowId` is the legacy name for `recordingId`; accept either for backward compatibility.
+      data["recordingId"] ||= data["windowId"]
+      data["windowId"] ||= data["recordingId"]
+
       events = data["events"]
 
-      session = Session.find_or_create_by(secure_id: session_secure_id)
-      window = SessionWindow.find_or_create_by(secure_id: window_secure_id, session: session)
+      if SpectatorSport::Recording.migrated?
+        create_recording(data, events)
+      else
+        create_session_window(data, events)
+      end
+
+      render json: { message: "ok" }
+    end
+
+    private
+
+    def create_recording(data, events)
+      recording = Recording.find_or_create_by(secure_id: data["recordingId"])
+
+      records_data = events.map do |event|
+        { recording_id: recording.id, event_data: event, created_at: Time.at(event["timestamp"].to_f / 1000.0) }
+      end.to_a
+      Event.insert_all(records_data) if records_data.any?
+
+      last_event = records_data.max_by { |record| record[:created_at] }
+      recording.update(updated_at: last_event[:created_at]) if last_event
+
+      if SpectatorSport::Label.migrated?
+        verifier = Rails.application.message_verifier(:spectator_sport_label_recording)
+        Array(data["labels"]).first(20).each do |signed_label|
+          label_data = verifier.verified(signed_label)
+          next unless label_data.is_a?(Hash)
+          Label.record(
+            recording: recording,
+            value: label_data["value"],
+            key: label_data["key"],
+            strategy: label_data["strategy"]
+          )
+        rescue StandardError
+          nil
+        end
+      end
+    end
+
+    def create_session_window(data, events)
+      session = Session.find_or_create_by(secure_id: data["sessionId"])
+      window = SessionWindow.find_or_create_by(secure_id: data["windowId"], session: session)
 
       records_data = events.map do |event|
         { session_id: session.id, session_window_id: window.id, event_data: event, created_at: Time.at(event["timestamp"].to_f / 1000.0) }
@@ -54,8 +96,6 @@ module SpectatorSport
           nil
         end
       end
-
-      render json: { message: "ok" }
     end
   end
 end
