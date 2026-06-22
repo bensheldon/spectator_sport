@@ -37,6 +37,8 @@ export default class extends Controller {
       this.linkUrlTarget.dataset.url = url;
     });
 
+    this.#keepScrubberEnabled();
+
     const playerElement = this.playerTarget.getElementsByClassName("rr-player")[0];
     playerElement.style.width = "100%";
     playerElement.style.height = null;
@@ -56,7 +58,17 @@ export default class extends Controller {
     element.remove();
   }
 
+  // rrweb disables the scrubber during fast-forward (skip inactive); strip it so users can still seek
+  #keepScrubberEnabled() {
+    const progress = this.playerTarget.querySelector('.rr-progress');
+    if (progress) {
+      this.scrubberObserver = new MutationObserver(() => progress.classList.remove('disabled'));
+      this.scrubberObserver.observe(progress, { attributeFilter: ['class'] });
+    }
+  }
+
   disconnect() {
+    this.scrubberObserver?.disconnect();
     this.player?.$destroy();
   }
 }
