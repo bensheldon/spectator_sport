@@ -17,6 +17,7 @@ export default class extends Controller {
       props: {
         events: this.eventsValue,
         liveMode: true,
+        skipInactive: false,
       }
     });
 
