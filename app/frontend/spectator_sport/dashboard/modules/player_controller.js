@@ -18,6 +18,7 @@ export default class extends Controller {
         events: this.eventsValue,
         liveMode: true,
         skipInactive: false,
+        speedOption: [1, 2, 4, 8, 16],
       }
     });
 
