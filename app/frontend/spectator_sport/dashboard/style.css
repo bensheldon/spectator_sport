@@ -65,12 +65,6 @@
   width: 1rem;
 }
 
-/* rrweb sets cursor: not-allowed on the scrubber while fast-forwarding (skipping
-   inactivity); keep the normal pointer so it doesn't look broken */
-.rr-progress.disabled {
-  cursor: pointer !important;
-}
-
 /*Style table within card*/
 .card > table:first-child > thead > tr:first-child > th:first-child {
   border-top-left-radius: var(--bs-card-inner-border-radius);
