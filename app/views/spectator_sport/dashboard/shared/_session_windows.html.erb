@@ -21,11 +21,7 @@
         <% if SpectatorSport::Label.migrated? %>
           <td>
             <% session_window.labels.each do |swl| %>
-              <% if swl.key.present? %>
-                <%= link_to swl.display, label_path(swl.key, swl.value) %>
-              <% else %>
-                <%= link_to swl.value, label_tag_path(swl.value) %>
-              <% end %>
+              <%= swl.display %>
             <% end %>
           </td>
         <% end %>

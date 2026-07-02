@@ -27,7 +27,7 @@
     </div>
   </div>
   <% keyed_labels = @labels.select { |l| l.key.present? }.group_by(&:key) %>
-  <% keyless_labels = @labels.select { |l| l.key.nil? }.map(&:value) %>
+  <% keyless_labels = @labels.select { |l| l.key.nil? } %>
   <% if keyed_labels.any? || keyless_labels.any? %>
     <div class="card mt-3">
       <div class="card-header">Labels</div>
@@ -41,10 +41,10 @@
         <tbody>
           <% keyed_labels.each do |key, labels| %>
             <tr>
-              <td><%= link_to key, label_key_path(key) %></td>
+              <td><%= link_to key, recordings_path(query: SpectatorSport::SearchQuery.label_key_term(key)) %></td>
               <td>
                 <% labels.each do |label| %>
-                  <%= link_to label.value, label_path(label.key, label.value) %>
+                  <%= link_to label.value, recordings_path(query: SpectatorSport::SearchQuery.label_term(label)) %>
                 <% end %>
               </td>
             </tr>
@@ -53,8 +53,8 @@
             <tr>
               <td></td>
               <td>
-                <% keyless_labels.each do |lv| %>
-                  <%= link_to lv, label_tag_path(lv) %>
+                <% keyless_labels.each do |label| %>
+                  <%= link_to label.value, recordings_path(query: SpectatorSport::SearchQuery.label_term(label)) %>
                 <% end %>
               </td>
             </tr>
