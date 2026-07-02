@@ -19,11 +19,8 @@
         <% if SpectatorSport::Label.migrated? %>
           <td>
             <% recording.labels.each do |label| %>
-              <% if label.key.present? %>
-                <%= link_to label.display, label_path(label.key, label.value) %>
-              <% else %>
-                <%= link_to label.value, label_tag_path(label.value) %>
-              <% end %>
+              <% label_query = SpectatorSport::SearchQuery.with_term(@search_query&.query, SpectatorSport::SearchQuery.label_term(label)) %>
+              <%= link_to label.display, recordings_path(query: label_query) %>
             <% end %>
           </td>
         <% end %>

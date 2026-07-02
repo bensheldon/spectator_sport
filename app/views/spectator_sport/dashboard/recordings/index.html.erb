@@ -1,4 +1,21 @@
 <div class="container my-3">
+  <%= form_with url: root_path, method: :get, class: "mb-3" do |form| %>
+    <div class="input-group">
+      <%= form.text_field :query, value: @search_query.query, class: "form-control", placeholder: "Search recordings" %>
+      <%= form.button "Search", class: "btn btn-outline-secondary", type: "submit" %>
+      <% if @search_query.query.present? %>
+        <%= link_to "Clear", root_path, class: "btn btn-outline-secondary" %>
+      <% end %>
+    </div>
+    <% if @search_query.errors[:query].any? %>
+      <div class="form-text text-danger"><%= @search_query.errors[:query].to_sentence %></div>
+    <% end %>
+    <div class="form-text">
+      Examples: <code>label:key:value</code>, <code>label:key:*</code>, <code>label:key:2*</code>, <code>-label:key:value</code>,
+      <code>created:2026-01-31</code>, <code>created:>=2026-01-31</code>, <code>label:a OR label:b</code>, <code>(label:a AND label:b)</code>
+    </div>
+  <% end %>
+
   <% if @recordings.to_a.any? %>
     <%= render "spectator_sport/dashboard/shared/recordings", recordings: @recordings %>
   <% else %>

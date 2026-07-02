@@ -12,7 +12,7 @@ RSpec.describe "Recording labels", type: :system, js: true do
     expect(page).to have_text("user_id: 27")
 
     first(:link, "user_id: 27").click
-    expect(page).to have_text("Recordings labeled: user_id: 27")
+    expect(page).to have_field("query", with: "label:user_id:27")
     expect(page).to have_css("table")
   end
 
@@ -26,22 +26,36 @@ RSpec.describe "Recording labels", type: :system, js: true do
     expect(page).not_to have_link("user_id", exact: true)
 
     first(:link, "user_id: 27").click
-    expect(page).to have_text("Recordings labeled: user_id: 27")
+    expect(page).to have_field("query", with: "label:user_id:27")
     expect(page).to have_css("table")
   end
 
-  it "key/value view links back to key view" do
+  it "recording permalink page's label value link filters by key:value" do
     visit "/examples"
     expect(page).to have_text("Your browser activity is being recorded.")
     wait_for_recording
 
     visit "/spectator_sport_dashboard"
-    expect(page).to have_text("user_id: 27")
+    click_link "Recording", match: :first
 
-    first(:link, "user_id: 27").click
-    expect(page).to have_text("Recordings labeled: user_id: 27")
-    click_link "See all recordings with key: user_id"
-    expect(page).to have_text("Recordings with label key: user_id")
+    within(".card", text: "Labels") do
+      click_link "27"
+    end
+    expect(page).to have_field("query", with: "label:user_id:27")
+  end
+
+  it "recording permalink page's label key link filters by key" do
+    visit "/examples"
+    expect(page).to have_text("Your browser activity is being recorded.")
+    wait_for_recording
+
+    visit "/spectator_sport_dashboard"
+    click_link "Recording", match: :first
+
+    within(".card", text: "Labels") do
+      click_link "user_id"
+    end
+    expect(page).to have_field("query", with: "label:user_id:*")
   end
 
   it "stores a keyless label from the page and shows it in the dashboard" do
@@ -53,7 +67,7 @@ RSpec.describe "Recording labels", type: :system, js: true do
     expect(page).to have_text("vip")
 
     first(:link, "vip").click
-    expect(page).to have_text("Recordings labeled: vip")
+    expect(page).to have_field("query", with: "label:vip")
     expect(page).to have_css("table")
   end
 

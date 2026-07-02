@@ -2,8 +2,18 @@ module SpectatorSport
   module Dashboard
     class RecordingsController < ApplicationController
       def index
+        @search_query = SpectatorSport::SearchQuery.new(query: params[:query])
+
         @recordings = Recording.order(:created_at).limit(50).reverse_order
         @recordings = @recordings.includes(:labels) if SpectatorSport::Label.migrated?
+
+        if @search_query.query.present? && SpectatorSport::Label.migrated?
+          if @search_query.valid?
+            @recordings = @search_query.to_scope(base_scope: @recordings)
+          else
+            @recordings = @recordings.none
+          end
+        end
       end
 
       def show
