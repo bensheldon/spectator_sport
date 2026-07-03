@@ -6,10 +6,10 @@ module SpectatorSport
       app.deprecators[:spectator_sport] = SpectatorSport.deprecator
     end
 
-    initializer "local_helper.action_controller" do
-      ActiveSupport.on_load :action_controller do
+    config.after_initialize do
+      ActiveSupport.on_load :action_view do
         # TODO: this should probably be done manually by the client, maybe?
-        helper SpectatorSport::ScriptHelper
+        include SpectatorSport::ScriptHelper
       end
     end
   end
