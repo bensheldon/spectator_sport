@@ -77,6 +77,70 @@ This renders a hidden `<meta>` element signed by the server. The recording clien
 
 **Note:** this requires the `spectator_sport_labels` migration to be applied (`bin/rails spectator_sport:install:migrations && bin/rails db:migrate`). If the migration hasn't been run, the feature is silently disabled.
 
+## Linking your app to recordings
+
+Each browser tab has its own recording, identified by a `windowId`. You can use this ID to link behavior in your application — form submissions, errors, analytics events — back to the specific recording of that tab.
+
+Two things to understand about recordings:
+
+1. **Recordings start after the first page load.** The recording script loads with `defer`, so it runs after the page HTML is parsed. On the very first request to your server, no recording exists yet and no `windowId` is available server-side. By the second request (navigation, form submission, etc.), the ID is available.
+
+2. **Each browser tab has its own recording.** Opening a second tab starts a new, independent recording. The `windowId` identifies the tab, not the user or session.
+
+### Accessing the recording ID in Rails
+
+Include `SpectatorSport::RecordingContext` in your `ApplicationController`:
+
+```ruby
+class ApplicationController < ActionController::Base
+  include SpectatorSport::RecordingContext
+end
+```
+
+This provides `spectator_sport_window_id` as both a controller method and a view helper. Returns `nil` on the first page load (before the recording has started) or if the value is malformed.
+
+Spectator Sport delivers the `windowId` automatically on subsequent requests via:
+
+- **Cookie** (`spectator_sport_window_id`): set when the tab is active, cleared when backgrounded. Sent with all requests.
+- **Request header** (`X-Spectator-Sport-Window-Id`): added to all Turbo requests.
+
+```ruby
+# Tag a server-side error with the recording ID
+rescue_from StandardError do |exception|
+  Sentry.with_scope do |scope|
+    scope.set_tag('spectator_sport_window_id', spectator_sport_window_id)
+    Sentry.capture_exception(exception)
+  end
+end
+
+```
+
+### JavaScript API
+
+After the recording script loads, `window.SpectatorSport` is available with the current tab's recording context:
+
+```javascript
+window.SpectatorSport?.context?.windowId  // unique ID for this browser tab's recording
+```
+
+Spectator Sport also dispatches events on `document` when the recording state changes:
+
+| Event | When |
+|-------|------|
+| `spectator-sport:start` | Once on initialization, recording started |
+| `spectator-sport:pause` | Tab hidden or page unloading |
+| `spectator-sport:resume` | Tab visible or page shown (including bfcache restore) |
+
+All events include `{ windowId }` in their `detail`. Use these to integrate with custom fetch libraries or navigation frameworks:
+
+```javascript
+document.addEventListener('spectator-sport:start', ({ detail: { windowId } }) => {
+  MyRouter.beforeEach(() => {
+    MyHttp.defaultHeaders['X-Recording-Id'] = windowId;
+  });
+});
+```
+
 ## Stopping recording
 
 You can pause recording for a page by calling `spectator_sport_stop_recording` in any template:

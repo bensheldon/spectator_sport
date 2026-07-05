@@ -397,6 +397,26 @@ function isStopped() {
   return !!document.querySelector(STOP_SELECTOR);
 }
 
+function startCookieIntegration() {
+  function set() {
+    document.cookie = `spectator_sport_window_id=${window.SpectatorSport.context.windowId}; path=/; SameSite=Strict`;
+  }
+  function clear() {
+    document.cookie = `spectator_sport_window_id=; path=/; SameSite=Strict; max-age=0`;
+  }
+  document.addEventListener('spectator-sport:start', set);
+  document.addEventListener('spectator-sport:resume', set);
+  document.addEventListener('spectator-sport:pause', clear);
+}
+
+function startTurboIntegration() {
+  document.addEventListener('spectator-sport:start', function() {
+    document.addEventListener('turbo:before-fetch-request', function(event) {
+      event.detail.fetchOptions.headers['X-Spectator-Sport-Window-Id'] = window.SpectatorSport.context.windowId;
+    });
+  });
+}
+
 class PageLifecycleManager {
   constructor(recorder) {
     this.recorder = recorder;
@@ -415,6 +435,7 @@ class PageLifecycleManager {
       this.recorder.stop();
     } else {
       this.recorder.start();
+      document.dispatchEvent(new CustomEvent('spectator-sport:resume', { detail: window.SpectatorSport.context }));
     }
   }
 
@@ -424,6 +445,7 @@ class PageLifecycleManager {
   #onPageHide(_event) {
     log("pagehide");
     this.recorder.stop();
+    document.dispatchEvent(new CustomEvent('spectator-sport:pause', { detail: window.SpectatorSport.context }));
   }
 
   #onVisibilityChange() {
@@ -431,9 +453,11 @@ class PageLifecycleManager {
     if (document.visibilityState === "visible") {
       if (!isStopped()) {
         this.recorder.unpause();
+        document.dispatchEvent(new CustomEvent('spectator-sport:resume', { detail: window.SpectatorSport.context }));
       }
     } else if (document.visibilityState === "hidden") {
       this.recorder.pause();
+      document.dispatchEvent(new CustomEvent('spectator-sport:pause', { detail: window.SpectatorSport.context }));
     }
   }
 }
@@ -454,6 +478,17 @@ labelWatcher.start();
 
 const stopWatcher = new StopWatcher(recorder);
 stopWatcher.start();
+
+const context = { windowId };
+
+window.SpectatorSport = {
+  context,
+};
+
+startCookieIntegration();
+startTurboIntegration();
+
+document.dispatchEvent(new CustomEvent('spectator-sport:start', { detail: context }));
 
 const lifecycleManager = new PageLifecycleManager(recorder);
 lifecycleManager.start();
