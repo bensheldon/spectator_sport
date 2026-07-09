@@ -11,13 +11,52 @@ module SpectatorSport
     Explanation = Struct.new(:title, :details)
 
     # taken from https://github.com/rrweb-io/rrweb/blob/9488deb6d54a5f04350c063d942da5e96ab74075/src/types.ts
-    EVENT_TYPES = %w[DomContentLoaded Load FullSnapshot IncrementalSnapshot Meta Custom]
+    # Keyed by string digits (not indexed by integer) since the raw ordinal may arrive, or be
+    # read back out of the event_data json column, as either an Integer or a String.
+    EVENT_TYPES = {
+      "0" => "DomContentLoaded",
+      "1" => "Load",
+      "2" => "FullSnapshot",
+      "3" => "IncrementalSnapshot",
+      "4" => "Meta",
+      "5" => "Custom",
+      "6" => "Plugin",
+      "7" => "Asset"
+    }
 
-    EVENT_SOURCES = %w[Mutation MouseMove MouseInteraction Scroll ViewportResize Input TouchMove MediaInteraction
-                       StyleSheetRule CanvasMutation Font Log Drag StyleDeclaration Selection AdoptedStyleSheet]
+    EVENT_SOURCES = {
+      "0" => "Mutation",
+      "1" => "MouseMove",
+      "2" => "MouseInteraction",
+      "3" => "Scroll",
+      "4" => "ViewportResize",
+      "5" => "Input",
+      "6" => "TouchMove",
+      "7" => "MediaInteraction",
+      "8" => "StyleSheetRule",
+      "9" => "CanvasMutation",
+      "10" => "Font",
+      "11" => "Log",
+      "12" => "Drag",
+      "13" => "StyleDeclaration",
+      "14" => "Selection",
+      "15" => "AdoptedStyleSheet",
+      "16" => "CustomElement"
+    }
 
-    MOUSE_INTERACTIONS = %w[MouseUp MouseDown Click ContextMenu DblClick Focus Blur TouchStart TouchMove_Departed
-                            TouchEnd TouchCancel]
+    MOUSE_INTERACTIONS = {
+      "0" => "MouseUp",
+      "1" => "MouseDown",
+      "2" => "Click",
+      "3" => "ContextMenu",
+      "4" => "DblClick",
+      "5" => "Focus",
+      "6" => "Blur",
+      "7" => "TouchStart",
+      "8" => "TouchMove_Departed",
+      "9" => "TouchEnd",
+      "10" => "TouchCancel"
+    }
 
     def explanation
       explanation = Explanation.new(title, [])
@@ -31,26 +70,16 @@ module SpectatorSport
       end
 
       if event_source == "MouseInteraction"
-        mouse_interaction = MOUSE_INTERACTIONS[event_data.dig("data", "type")]
+        mouse_interaction = MOUSE_INTERACTIONS[event_data.dig("data", "type").to_s]
         explanation.details << "#{mouse_interaction}"
       end
 
       explanation
     end
 
-    def event_type
-      EVENT_TYPES[event_data["type"]]
-    end
-
-    def event_source
-      return unless event_data.dig("data", "source")
-
-      EVENT_SOURCES[event_data.dig("data", "source")]
-    end
-
     def title
       if event_type == "IncrementalSnapshot" && event_source == "MouseInteraction" &&
-          MOUSE_INTERACTIONS[event_data.dig("data", "type")] == "Click"
+          MOUSE_INTERACTIONS[event_data.dig("data", "type").to_s] == "Click"
         "Mouse Click"
       else
         event_type
@@ -60,5 +89,15 @@ module SpectatorSport
     def page
       event_data.dig("data", "href")
     end
+
+    def label? = event_data.dig("data", "tag") == CustomEvents::LABEL
+    def label_key = event_data.dig("data", "payload", "key")
+    def label_value = event_data.dig("data", "payload", "value")
+
+    def history? = event_data.dig("data", "tag") == CustomEvents::HISTORY
+    def history_href = event_data.dig("data", "payload", "href")
+
+    def lifecycle? = event_data.dig("data", "tag") == CustomEvents::LIFECYCLE
+    def lifecycle_reason = event_data.dig("data", "payload", "reason")
   end
 end

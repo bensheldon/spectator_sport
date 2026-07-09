@@ -42,16 +42,107 @@ describe SpectatorSport::EventsController, type: :controller do
       )
     end
 
-    it 'stores labels bundled with events in a single request' do
+    it 'decodes event_type and event_source for a Meta event' do
+      payload = {
+        "sessionId": "fb1x1aji7p5nljgnydya9kid7vncrzw48ir7d70h",
+        "recordingId": "873h0zhhw66i9f1t36rh5myu8pzwopt676v9s83z",
+        "events": [
+          { "type": 4, "data": { "href": "http://127.0.0.1:3000/", "width": 1512, "height": 770 }, "timestamp": 1727655888530 }
+        ]
+      }
+
+      post :create, params: payload
+
+      expect(SpectatorSport::Event.last).to have_attributes(
+        event_type: "Meta",
+        event_source: nil
+      )
+    end
+
+    it 'decodes event_type and event_source for an IncrementalSnapshot/MouseInteraction event' do
+      payload = {
+        "sessionId": "fb1x1aji7p5nljgnydya9kid7vncrzw48ir7d70h",
+        "recordingId": "873h0zhhw66i9f1t36rh5myu8pzwopt676v9s83z",
+        "events": [
+          { "type": 3, "data": { "source": 2, "type": 2, "id": 5 }, "timestamp": 1727655888530 }
+        ]
+      }
+
+      post :create, params: payload
+
+      expect(SpectatorSport::Event.last).to have_attributes(
+        event_type: "IncrementalSnapshot",
+        event_source: "MouseInteraction"
+      )
+    end
+
+    it 'decrypts the signed payload of a Custom/label event and stores only the decoded key/value' do
       label_verifier = Rails.application.message_verifier(:spectator_sport_label_recording)
+      signed = label_verifier.generate({ "value" => "27", "key" => "user_id", "strategy" => "many" })
+
+      payload = {
+        "sessionId": "fb1x1aji7p5nljgnydya9kid7vncrzw48ir7d70h",
+        "recordingId": "873h0zhhw66i9f1t36rh5myu8pzwopt676v9s83z",
+        "events": [
+          { "type": 5, "data": { "tag": "spectator_sport:label", "payload": { "signed": signed } }, "timestamp": 1727655888530 }
+        ]
+      }
+
+      post :create, params: payload
+
+      event = SpectatorSport::Event.last
+      expect(event).to have_attributes(event_type: "Custom", event_source: nil)
+      expect(event.label?).to eq(true)
+      expect(event.label_key).to eq("user_id")
+      expect(event.label_value).to eq("27")
+      expect(event.event_data.dig("data", "payload")).not_to have_key("signed")
+    end
+
+    it 'stores an empty payload for a Custom/label event with an invalid signature' do
+      payload = {
+        "sessionId": "fb1x1aji7p5nljgnydya9kid7vncrzw48ir7d70h",
+        "recordingId": "873h0zhhw66i9f1t36rh5myu8pzwopt676v9s83z",
+        "events": [
+          { "type": 5, "data": { "tag": "spectator_sport:label", "payload": { "signed": "not-a-valid-signature" } }, "timestamp": 1727655888530 }
+        ]
+      }
+
+      post :create, params: payload
+
+      event = SpectatorSport::Event.last
+      expect(event.label?).to eq(true)
+      expect(event.label_key).to be_nil
+      expect(event.label_value).to be_nil
+    end
+
+    it 'decodes event_type for a Custom/history event' do
+      payload = {
+        "sessionId": "fb1x1aji7p5nljgnydya9kid7vncrzw48ir7d70h",
+        "recordingId": "873h0zhhw66i9f1t36rh5myu8pzwopt676v9s83z",
+        "events": [
+          { "type": 5, "data": { "tag": "spectator_sport:history", "payload": { "href": "http://127.0.0.1:3000/next" } }, "timestamp": 1727655888530 }
+        ]
+      }
+
+      post :create, params: payload
+
+      event = SpectatorSport::Event.last
+      expect(event).to have_attributes(event_type: "Custom", event_source: nil)
+      expect(event.history?).to eq(true)
+      expect(event.history_href).to eq("http://127.0.0.1:3000/next")
+    end
+
+    it 'records a Label from a Custom/label event bundled with events in a single request' do
+      label_verifier = Rails.application.message_verifier(:spectator_sport_label_recording)
+      signed = label_verifier.generate({ "value" => "42", "key" => "user_id", "strategy" => "one" })
 
       payload = {
         "sessionId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "recordingId": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
         "events": [
-          { "type": 4, "data": { "href": "http://127.0.0.1:3000/", "width": 1512, "height": 770 }, "timestamp": 1727655888530 }
-        ],
-        "labels": [ label_verifier.generate({ "value" => "42", "key" => "user_id", "strategy" => "one" }) ]
+          { "type": 4, "data": { "href": "http://127.0.0.1:3000/", "width": 1512, "height": 770 }, "timestamp": 1727655888530 },
+          { "type": 5, "data": { "tag": "spectator_sport:label", "payload": { "signed": signed } }, "timestamp": 1727655888531 }
+        ]
       }
 
       post :create, params: payload
@@ -97,24 +188,6 @@ describe SpectatorSport::EventsController, type: :controller do
           session: SpectatorSport::Session.find_by(secure_id: payload[:sessionId]),
           session_window: SpectatorSport::SessionWindow.find_by(secure_id: payload[:windowId])
         )
-      end
-
-      it 'stores labels on the session_window' do
-        label_verifier = Rails.application.message_verifier(:spectator_sport_label_recording)
-
-        payload = {
-          "sessionId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-          "recordingId": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-          "events": [
-            { "type": 4, "data": { "href": "http://127.0.0.1:3000/", "width": 1512, "height": 770 }, "timestamp": 1727655888530 }
-          ],
-          "labels": [ label_verifier.generate({ "value" => "42", "key" => "user_id", "strategy" => "one" }) ]
-        }
-
-        post :create, params: payload
-
-        window = SpectatorSport::SessionWindow.find_by(secure_id: payload[:recordingId])
-        expect(window.labels.where(key: "user_id", value: "42")).to exist
       end
 
       it 'stores tags on the session_window' do

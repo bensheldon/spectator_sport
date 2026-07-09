@@ -10,10 +10,12 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_19_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_07_000000) do
   create_table "spectator_sport_events", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.json "event_data", null: false
+    t.string "event_source"
+    t.string "event_type"
     t.integer "recording_id"
     t.integer "session_id"
     t.integer "session_window_id"
@@ -34,8 +36,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_19_000000) do
     t.datetime "updated_at", null: false
     t.string "value", null: false
     t.index [ "key", "value" ], name: "index_spectator_sport_labels_on_key_and_value"
-    t.index [ "recording_id" ], name: "index_spectator_sport_labels_on_recording_id"
     t.index [ "recording_id", "key" ], name: "index_labels_unique_singular_key_per_recording", unique: true, where: "multiple = false AND key IS NOT NULL"
+    t.index [ "recording_id" ], name: "index_spectator_sport_labels_on_recording_id"
     t.index [ "session_window_id", "key", "value" ], name: "idx_on_session_window_id_key_value_98301751dd"
     t.index [ "session_window_id", "key" ], name: "index_labels_unique_singular_key_per_window", unique: true, where: "multiple = false AND key IS NOT NULL"
     t.index [ "session_window_id" ], name: "index_spectator_sport_labels_on_session_window_id"

@@ -140,6 +140,12 @@ const RECORDING_TAG_SELECTOR = 'meta[name="spectator-sport-recording-tag"]';
 const RECORDING_LABEL_SELECTOR = 'meta[name="spectator-sport-recording-label"]';
 const STOP_SELECTOR = 'meta[name="spectator-sport-stop"]';
 
+const CustomEvents = {
+  LABEL: "spectator_sport:label",
+  HISTORY: "spectator_sport:history",
+  LIFECYCLE: "spectator_sport:lifecycle",
+};
+
 // sessionId is retained for backward compatibility with older servers that
 // store events under a Session/SessionWindow pair. New servers key on recordingId.
 function getSessionId() {
@@ -205,6 +211,10 @@ class Recorder {
   unpause() {
     this.start();
   }
+
+  customEvent(tag, payload) {
+    if (this.stopRrwebCallback) rrwebRecord.addCustomEvent(tag, payload);
+  }
 }
 
 class Events {
@@ -214,7 +224,6 @@ class Events {
 
     this.events = [];
     this.tags = new Set();
-    this.labels = new Set();
 
     this.payloadBytes = 0;
     this.flushIntervalId = null;
@@ -238,7 +247,9 @@ class Events {
   add(event) {
     this.events.push(event);
     this.payloadBytes += lengthInUtf8Bytes(JSON.stringify(event));
-    if (this.payloadBytes > KEEPALIVE_BYTE_LIMIT) {
+    // Custom label events skip the periodic 15s flush so labels reach the server promptly,
+    // the way the old dedicated labels channel used to.
+    if (this.payloadBytes > KEEPALIVE_BYTE_LIMIT || event.data?.tag === CustomEvents.LABEL) {
       this.debouncedTransmit();
     }
   }
@@ -250,30 +261,20 @@ class Events {
     this.debouncedTransmit();
   }
 
-  addLabel(signedLabel) {
-    if (this.labels.has(signedLabel)) return;
-    this.labels.add(signedLabel);
-    this.payloadBytes += lengthInUtf8Bytes(JSON.stringify(signedLabel));
-    this.debouncedTransmit();
-  }
-
   transmit(keepalive = false) {
-    if (this.events.length === 0 && this.tags.size === 0 && this.labels.size === 0) {
+    if (this.events.length === 0 && this.tags.size === 0) {
       return;
     }
 
     const events = [...this.events];
     const tags = [...this.tags];
-    const labels = [...this.labels];
     this.events = [];
     this.tags = new Set();
-    this.labels = new Set();
     this.payloadBytes = 0;
 
     // sessionId is sent for backward compatibility with older servers; new servers key on recordingId.
     const payload = { sessionId: this.sessionId, recordingId: this.recordingId, events };
     if (tags.length > 0) payload.tags = tags;
-    if (labels.length > 0) payload.labels = labels;
 
     const body = JSON.stringify(payload);
 
@@ -332,14 +333,20 @@ class TagWatcher {
 }
 
 class LabelWatcher {
-  constructor(events) {
-    this.events = events;
+  constructor(recorder) {
+    this.recorder = recorder;
     this.observer = null;
+  }
+
+  // el.content is the signed payload from spectator_sport_label_recording; the server
+  // decrypts it into event_data on ingestion, so no plaintext label data is ever recorded here.
+  #addLabel(el) {
+    this.recorder.customEvent(CustomEvents.LABEL, { signed: el.content });
   }
 
   start() {
     document.querySelectorAll(RECORDING_LABEL_SELECTOR).forEach(el => {
-      this.events.addLabel(el.content);
+      this.#addLabel(el);
     });
 
     this.observer = new MutationObserver((mutations) => {
@@ -347,10 +354,10 @@ class LabelWatcher {
         for (const node of mutation.addedNodes) {
           if (node.nodeType !== Node.ELEMENT_NODE) continue;
           if (node.matches(RECORDING_LABEL_SELECTOR)) {
-            this.events.addLabel(node.content);
+            this.#addLabel(node);
           }
           node.querySelectorAll(RECORDING_LABEL_SELECTOR).forEach(el => {
-            this.events.addLabel(el.content);
+            this.#addLabel(el);
           });
         }
       }
@@ -393,6 +400,29 @@ class StopWatcher {
   }
 }
 
+class HistoryWatcher {
+  constructor(recorder) {
+    this.recorder = recorder;
+  }
+
+  start() {
+    const emitHistoryEvent = () => {
+      this.recorder.customEvent(CustomEvents.HISTORY, { href: location.href });
+    };
+
+    for (const method of [ "pushState", "replaceState" ]) {
+      const original = history[method];
+      history[method] = function (...args) {
+        const result = original.apply(this, args);
+        emitHistoryEvent();
+        return result;
+      };
+    }
+
+    window.addEventListener("popstate", emitHistoryEvent);
+  }
+}
+
 function isStopped() {
   return !!document.querySelector(STOP_SELECTOR);
 }
@@ -415,6 +445,7 @@ class PageLifecycleManager {
       this.recorder.stop();
     } else {
       this.recorder.start();
+      this.recorder.customEvent(CustomEvents.LIFECYCLE, { reason: "bfcache-restore" });
     }
   }
 
@@ -449,11 +480,14 @@ if (!isStopped()) {
 const tagWatcher = new TagWatcher(recorder.events);
 tagWatcher.start();
 
-const labelWatcher = new LabelWatcher(recorder.events);
+const labelWatcher = new LabelWatcher(recorder);
 labelWatcher.start();
 
 const stopWatcher = new StopWatcher(recorder);
 stopWatcher.start();
+
+const historyWatcher = new HistoryWatcher(recorder);
+historyWatcher.start();
 
 const lifecycleManager = new PageLifecycleManager(recorder);
 lifecycleManager.start();
