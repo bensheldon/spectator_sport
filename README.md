@@ -39,13 +39,21 @@ To install Spectator Sport in your Rails application:
     ```
 2. Install Spectator Sport in your application. _🚧 This will change on the path to v1._ Explore the `/demo` app as live example:
     - Create database migrations with `bin/rails spectator_sport:install:migrations`. Apply migrations with `bin/rails db:prepare`
-    - Mount the recorder API in your application's routes with `mount SpectatorSport::Engine, at: "/spectator_sport, as: :spectator_sport"`
+    - Mount the recorder API in your application's routes:
+        ```ruby
+        # config/routes.rb
+        mount SpectatorSport::Engine, at: "/spectator_sport"
+        ```
     - Add the `spectator_sport_script_tags` helper to the bottom of the `<head>` of `layout/application.rb`. Example:
         ```erb
         <%# app/views/layouts/application.html.erb %>
           <%# ... %>
           <%= spectator_sport_script_tags %>
         </head>
+        ```
+        If the engine is mounted with a different `as:` option or within a namespace, pass the route name it is mounted as. For example, `namespace(:admin) { mount SpectatorSport::Engine, at: "/spectator_sport" }` is mounted as `admin_spectator_sport`:
+        ```erb
+        <%= spectator_sport_script_tags(mounted_as: :admin_spectator_sport) %>
         ```
 
     - Add a `<script>` tag to `public/404.html`, `public/422.html`, and `public/500/html` error pages. Example:
@@ -55,7 +63,11 @@ To install Spectator Sport in your Rails application:
           <script defer src="/spectator_sport/events.js"></script>
         </head>
         ```
-  3. To view recordings, you will want to mount the Player Dashboard in your application and set up authorization to limit access. See the section on [Dashboard authorization](#dashboard-authorization) for instructions.
+3. To view recordings, mount the Player Dashboard in your application's routes and set up authorization to limit access to it. See [Dashboard authorization](#dashboard-authorization) for route-constraint, Basic Auth, and `ActiveSupport.on_load` initializer examples:
+    ```ruby
+    # config/routes.rb
+    mount SpectatorSport::Dashboard::Engine, at: "/spectator_sport_dashboard", as: :spectator_sport_dashboard
+    ```
 
 ## Labeling recordings
 
@@ -137,12 +149,14 @@ Rails.application.routes.draw do
 end
 ```
 
-Or extend the `SpectatorSport::Dashboard::ApplicationController` with your own authorization logic:
+Or extend the `SpectatorSport::Dashboard::ApplicationController` with your own authorization logic. The controller runs the `:spectator_sport_dashboard_application_controller` load hook, so you can include your application's own authentication concerns and add `before_action` checks from an initializer:
 
 ```ruby
 # config/initializers/spectator_sport.rb
 ActiveSupport.on_load(:spectator_sport_dashboard_application_controller) do
   # context here is SpectatorSport::Dashboard::ApplicationController
+
+  # include Authentication # e.g. concerns from your application
 
   before_action do
     raise ActionController::RoutingError.new('Not Found') unless current_user&.admin?
