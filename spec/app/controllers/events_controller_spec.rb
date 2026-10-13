@@ -26,6 +26,58 @@ describe SpectatorSport::EventsController, type: :controller do
       )
     end
 
+    it 'strips null bytes that Postgres jsonb cannot store' do
+      payload = {
+        "sessionId" => "fb1x1aji7p5nljgnydya9kid7vncrzw48ir7d70h",
+        "recordingId" => "873h0zhhw66i9f1t36rh5myu8pzwopt676v9s83z",
+        "events" => [
+          { "type" => 3, "data" => { "source" => 5, "text" => "Bitter value\u0000", "id" => 1 }, "timestamp" => 1727655888530 }
+        ]
+      }
+
+      post :create, body: payload.to_json, format: :json
+
+      expect(SpectatorSport::Event.last.event_data.dig("data", "text")).to eq "Bitter value"
+    end
+
+    it 'replaces lone UTF-16 surrogates instead of rejecting the request' do
+      body = '{"sessionId":"s1","recordingId":"r1","events":[{"type":3,"data":{"source":5,"text":"cut \\ud83d"},"timestamp":1727655888530}]}'
+
+      post :create, body: body, format: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(SpectatorSport::Event.last.event_data.dig("data", "text")).to eq "cut \uFFFD"
+    end
+
+    it 'drops structurally invalid events and keeps the valid ones' do
+      payload = {
+        "sessionId" => "s1",
+        "recordingId" => "r1",
+        "events" => [
+          "not an event",
+          { "type" => "nope", "data" => {}, "timestamp" => 1727655888530 },
+          { "type" => 4, "data" => {}, "timestamp" => 1e20 },
+          { "type" => 4, "data" => {} },
+          { "type" => 4, "data" => { "href" => "http://example.com/" }, "timestamp" => 1727655888530 }
+        ]
+      }
+
+      expect { post :create, body: payload.to_json, format: :json }.to change(SpectatorSport::Event, :count).by(1)
+      expect(response).to have_http_status(:ok)
+    end
+
+    it 'returns bad request for an unparseable body' do
+      post :create, body: '{"recordingId":"r1","events":[', format: :json
+
+      expect(response).to have_http_status(:bad_request)
+    end
+
+    it 'returns bad request without a recordingId' do
+      post :create, body: { "events" => [] }.to_json, format: :json
+
+      expect(response).to have_http_status(:bad_request)
+    end
+
     it 'accepts the legacy windowId parameter as an alias for recordingId' do
       payload = {
         "sessionId": "fb1x1aji7p5nljgnydya9kid7vncrzw48ir7d70h",

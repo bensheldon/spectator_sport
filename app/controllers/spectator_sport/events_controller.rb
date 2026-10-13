@@ -2,22 +2,76 @@ module SpectatorSport
   class EventsController < ApplicationController
     skip_before_action :verify_authenticity_token
 
+    # Cleans up untrusted client payloads before they reach the database.
+    class Sanitizer
+      # Matches a JSON-escaped UTF-16 surrogate that isn't part of a valid pair, e.g. from
+      # JavaScript truncating a string between the two halves of an emoji.
+      LONE_SURROGATE_ESCAPE = /\\u[dD][89abAB]\h{2}(?!\\u[dD][c-fC-F]\h{2})|(?<!\\u[dD][89abAB]\h{2})\\u[dD][c-fC-F]\h{2}/
+      # Year 9999; well within the range Postgres timestamps can store.
+      MAX_TIMESTAMP_MS = 253_402_300_799_999
+
+      class << self
+        # Returns the parsed Hash, or nil if the body isn't a usable JSON object.
+        def parse_json(body)
+          body = body.to_s.dup.force_encoding(Encoding::UTF_8).scrub
+          parsed = begin
+            JSON.parse(body)
+          rescue JSON::ParserError
+            # Retry with lone surrogates replaced, which the JSON parser rejects outright.
+            JSON.parse(body.gsub(LONE_SURROGATE_ESCAPE, "\\ufffd")) rescue nil # rubocop:disable Style/RescueModifier
+          end
+          parsed.is_a?(Hash) ? parsed : nil
+        end
+
+        # Drops events that are structurally unusable rather than failing the whole batch,
+        # and cleans up string content that Postgres jsonb can't store.
+        def events(events)
+          return [] unless events.is_a?(Array)
+
+          events.filter_map do |event|
+            event = value(event)
+            next unless event.is_a?(Hash)
+            next unless event["type"].to_s.match?(/\A\d+\z/)
+
+            timestamp = Float(event["timestamp"], exception: false)
+            next unless timestamp&.between?(0, MAX_TIMESTAMP_MS)
+
+            event
+          end
+        end
+
+        # Postgres jsonb can't store the NUL character (\u0000) or invalid UTF-8.
+        def value(value)
+          case value
+          when ActionController::Parameters then value(value.to_unsafe_h)
+          when Hash then value.to_h { |k, v| [ value(k), value(v) ] }
+          when Array then value.map { |v| value(v) }
+          when String then value.scrub.delete("\u0000")
+          else value
+          end
+        end
+      end
+    end
+
     def index
     end
 
     def create
       data = if params.key?(:events) && (params.key?(:recordingId) || params.key?(:windowId))
-        params.slice(:sessionId, :recordingId, :windowId, :events, :tags).stringify_keys
+        params.slice(:sessionId, :recordingId, :windowId, :events, :tags).to_unsafe_h
       else
         # beacon sends JSON in the request body
-        JSON.parse(request.body.read).slice("sessionId", "recordingId", "windowId", "events", "tags")
+        Sanitizer.parse_json(request.body.read)&.slice("sessionId", "recordingId", "windowId", "events", "tags")
       end
+      return head(:bad_request) unless data
 
       # `windowId` is the legacy name for `recordingId`; accept either for backward compatibility.
       data["recordingId"] ||= data["windowId"]
       data["windowId"] ||= data["recordingId"]
+      return head(:bad_request) unless data["recordingId"].is_a?(String) && data["recordingId"].present?
+      data["sessionId"] = data["recordingId"] unless data["sessionId"].is_a?(String) && data["sessionId"].present?
 
-      events = data["events"]
+      events = Sanitizer.events(data["events"])
 
       if SpectatorSport::Recording.migrated?
         create_recording(data, events)
