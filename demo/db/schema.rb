@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_07_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_20_230000) do
   create_table "spectator_sport_events", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.json "event_data", null: false
@@ -47,6 +47,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_07_000000) do
     t.datetime "created_at", null: false
     t.string "secure_id", null: false
     t.datetime "updated_at", null: false
+    t.index [ "created_at" ], name: "index_spectator_sport_recordings_on_created_at"
+    t.index [ "secure_id" ], name: "index_spectator_sport_recordings_on_secure_id"
   end
 
   create_table "spectator_sport_session_window_tags", force: :cascade do |t|
