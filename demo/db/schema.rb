@@ -48,7 +48,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_230000) do
     t.string "secure_id", null: false
     t.datetime "updated_at", null: false
     t.index [ "created_at" ], name: "index_spectator_sport_recordings_on_created_at"
-    t.index [ "secure_id" ], name: "index_spectator_sport_recordings_on_secure_id"
+    t.index [ "secure_id" ], name: "index_spectator_sport_recordings_on_secure_id", unique: true
   end
 
   create_table "spectator_sport_session_window_tags", force: :cascade do |t|
