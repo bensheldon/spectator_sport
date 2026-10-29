@@ -136,6 +136,12 @@ function log(...args) {
 const POST_URL = new URL("./events", document.currentScript.src).href;
 const POST_INTERVAL_SECONDS = 15;
 const KEEPALIVE_BYTE_LIMIT = 60000; // Fetch payloads >64kb cannot use keepalive: true
+const BATCH_BYTE_LIMIT = 50000; // Leaves room for the payload envelope under KEEPALIVE_BYTE_LIMIT
+const MAX_RETRY_ATTEMPTS = 5;
+const RETRY_BASE_DELAY_MS = 1000;
+const RETRY_MAX_DELAY_MS = 30000;
+// Retrying a request the server rejected as malformed or too large won't succeed.
+const NON_RETRYABLE_STATUSES = [400, 413, 422];
 const RECORDING_TAG_SELECTOR = 'meta[name="spectator-sport-recording-tag"]';
 const RECORDING_LABEL_SELECTOR = 'meta[name="spectator-sport-recording-label"]';
 const STOP_SELECTOR = 'meta[name="spectator-sport-stop"]';
@@ -145,6 +151,7 @@ const CustomEvents = {
   HISTORY: "spectator_sport:history",
   LIFECYCLE: "spectator_sport:lifecycle",
 };
+const PRIORITY_CUSTOM_TAGS = Object.values(CustomEvents);
 
 // sessionId is retained for backward compatibility with older servers that
 // store events under a Session/SessionWindow pair. New servers key on recordingId.
@@ -170,6 +177,24 @@ function getRecordingId() {
     }
   }
   return id;
+}
+
+// Numbers every event in a recording so the player can show where events went missing.
+// Kept in sessionStorage alongside the recording ID so it survives full page loads.
+class SequenceCounter {
+  static STORAGE_NAME = "spectator_sport_sequence";
+
+  constructor(recordingId) {
+    const stored = JSON.parse(window.sessionStorage.getItem(SequenceCounter.STORAGE_NAME) || "null");
+    this.recordingId = recordingId;
+    this.value = stored?.recordingId === recordingId ? stored.value : 0;
+  }
+
+  next() {
+    this.value += 1;
+    window.sessionStorage.setItem(SequenceCounter.STORAGE_NAME, JSON.stringify({ recordingId: this.recordingId, value: this.value }));
+    return this.value;
+  }
 }
 
 class Recorder {
@@ -227,6 +252,9 @@ class Events {
 
     this.payloadBytes = 0;
     this.flushIntervalId = null;
+    this.retryAttempts = 0;
+    this.retryTimeout = null;
+    this.sequence = new SequenceCounter(recordingId);
   }
 
   startFlushing() {
@@ -245,6 +273,7 @@ class Events {
   }
 
   add(event) {
+    event.spectatorSportSeq = this.sequence.next();
     this.events.push(event);
     this.payloadBytes += lengthInUtf8Bytes(JSON.stringify(event));
     // Custom label events skip the periodic 15s flush so labels reach the server promptly,
@@ -272,16 +301,26 @@ class Events {
     this.tags = new Set();
     this.payloadBytes = 0;
 
+    // Browsers cap the combined size of all in-flight keepalive requests, so send the small,
+    // high-value batch (tags and navigation/label events) first to give it that budget.
+    let keepaliveBytes = 0;
+    for (const batch of buildBatches(events, tags)) {
+      const body = JSON.stringify(this.#payload(batch));
+      const bytes = lengthInUtf8Bytes(body);
+      const batchKeepalive = keepalive && keepaliveBytes + bytes <= KEEPALIVE_BYTE_LIMIT;
+      if (batchKeepalive) keepaliveBytes += bytes;
+      this.#send(batch, body, batchKeepalive);
+    }
+  }
+
+  #payload({ events, tags }) {
     // sessionId is sent for backward compatibility with older servers; new servers key on recordingId.
     const payload = { sessionId: this.sessionId, recordingId: this.recordingId, events };
     if (tags.length > 0) payload.tags = tags;
+    return payload;
+  }
 
-    const body = JSON.stringify(payload);
-
-    if (keepalive && lengthInUtf8Bytes(body) > KEEPALIVE_BYTE_LIMIT) {
-      keepalive = false;
-    }
-
+  #send(batch, body, keepalive) {
     fetch(POST_URL, {
       method: 'POST',
       headers: {
@@ -289,19 +328,83 @@ class Events {
       },
       keepalive: keepalive,
       body,
+    }).then((response) => {
+      if (response.ok) {
+        this.retryAttempts = 0;
+      } else if (NON_RETRYABLE_STATUSES.includes(response.status)) {
+        console.error(`spectator_sport: dropped ${batch.events.length} events, server responded ${response.status}`);
+      } else {
+        this.#requeue(batch, `server responded ${response.status}`);
+      }
     }).catch((error) => {
-      console.error(error);
+      this.#requeue(batch, error);
     });
+  }
+
+  // Puts a failed batch back at the front of the buffer and schedules a retry with backoff.
+  // Event order within a batch doesn't matter to the server, which orders by timestamp.
+  #requeue(batch, reason) {
+    this.retryAttempts += 1;
+    if (this.retryAttempts > MAX_RETRY_ATTEMPTS) {
+      console.error(`spectator_sport: dropped ${batch.events.length} events after ${MAX_RETRY_ATTEMPTS} retries`, reason);
+      this.retryAttempts = 0;
+      return;
+    }
+
+    this.events = [...batch.events, ...this.events];
+    batch.tags.forEach((tag) => this.tags.add(tag));
+    this.payloadBytes += lengthInUtf8Bytes(JSON.stringify(batch));
+
+    if (!this.retryTimeout) {
+      const delay = Math.min(RETRY_BASE_DELAY_MS * 2 ** (this.retryAttempts - 1), RETRY_MAX_DELAY_MS);
+      this.retryTimeout = setTimeout(() => {
+        this.retryTimeout = null;
+        this.transmit(false);
+      }, delay);
+    }
   }
 
   debouncedTransmit() {
     if (!this.debouncedTransmitTimeout) {
       this.debouncedTransmitTimeout = setTimeout(function() {
+        this.debouncedTransmitTimeout = null;
         this.transmit(false);
       }.bind(this), 100);
     }
 
   }
+}
+
+// Splits a buffer into POST bodies: one small batch with tags and navigation/label/lifecycle
+// events, then the remaining events chunked by size, so a rejected or timed-out snapshot
+// can't take the navigation data down with it. A single event over the limit is sent alone.
+function buildBatches(events, tags) {
+  const priority = [];
+  const rest = [];
+  for (const event of events) {
+    (PRIORITY_CUSTOM_TAGS.includes(event.data?.tag) ? priority : rest).push(event);
+  }
+
+  const batches = [];
+  if (priority.length > 0 || tags.length > 0) {
+    batches.push({ events: priority, tags });
+  }
+
+  let current = [];
+  let currentBytes = 0;
+  for (const event of rest) {
+    const bytes = lengthInUtf8Bytes(JSON.stringify(event));
+    if (current.length > 0 && currentBytes + bytes > BATCH_BYTE_LIMIT) {
+      batches.push({ events: current, tags: [] });
+      current = [];
+      currentBytes = 0;
+    }
+    current.push(event);
+    currentBytes += bytes;
+  }
+  if (current.length > 0) batches.push({ events: current, tags: [] });
+
+  return batches;
 }
 
 class TagWatcher {
