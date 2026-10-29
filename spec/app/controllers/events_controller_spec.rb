@@ -128,6 +128,19 @@ describe SpectatorSport::EventsController, type: :controller do
       )
     end
 
+    it 'keeps the sequence number on decoded label events' do
+      signed = Rails.application.message_verifier(:spectator_sport_label_recording).generate({ "value" => "27" })
+
+      post :create, params: {
+        "recordingId": "873h0zhhw66i9f1t36rh5myu8pzwopt676v9s83z",
+        "events": [
+          { "type": 5, "data": { "tag": "spectator_sport:label", "payload": { "signed": signed } }, "timestamp": 1727655888530, "spectatorSportSeq": 42 }
+        ]
+      }, as: :json
+
+      expect(SpectatorSport::Event.last.event_data["spectatorSportSeq"]).to eq(42)
+    end
+
     it 'decrypts the signed payload of a Custom/label event and stores only the decoded key/value' do
       label_verifier = Rails.application.message_verifier(:spectator_sport_label_recording)
       signed = label_verifier.generate({ "value" => "27", "key" => "user_id", "strategy" => "many" })
