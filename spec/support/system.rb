@@ -52,6 +52,7 @@ RSpec.configure do |config|
       screen_size: [ 1024, 800 ],
       options: {
         headless: ENV["SHOW_BROWSER"] ? false : true,
+        pending_connection_errors: false,
         browser_options: ENV["DOCKER"] ? { "no-sandbox" => nil } : {}
       }
     )
