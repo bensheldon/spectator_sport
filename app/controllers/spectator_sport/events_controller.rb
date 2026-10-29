@@ -103,8 +103,9 @@ module SpectatorSport
       {
         "type" => event["type"],
         "timestamp" => event["timestamp"],
-        "data" => { "tag" => event.dig("data", "tag"), "payload" => decoded_payload }
-      }
+        "data" => { "tag" => event.dig("data", "tag"), "payload" => decoded_payload },
+        "spectatorSportSeq" => event["spectatorSportSeq"]
+      }.compact
     end
 
     def create_recording(data, events)

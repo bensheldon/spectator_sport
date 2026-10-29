@@ -18,6 +18,7 @@ export default class extends Controller {
     if (this.eventsValue.length === 0) return;
 
     this.lastSeq = null;
+    this.seenSeqs = new Set();
 
     this.player = new Player({
       target: this.playerTarget,
@@ -68,7 +69,16 @@ export default class extends Controller {
 
   // Returns the events with a marker inserted before each event that follows missing ones.
   // Events from older recorders have no sequence number and are left alone.
+  // Also drops events whose sequence number was already seen: a retry after a lost response can
+  // store a batch twice, and replaying the same mutation twice breaks the replay.
   #withGapMarkers(events) {
+    events = events.filter(event => {
+      const seq = event.spectatorSportSeq;
+      if (!Number.isInteger(seq)) return true;
+      if (this.seenSeqs.has(seq)) return false;
+      this.seenSeqs.add(seq);
+      return true;
+    });
     const result = [];
     const sequenced = events
       .filter(event => Number.isInteger(event.spectatorSportSeq))

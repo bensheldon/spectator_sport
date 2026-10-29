@@ -252,7 +252,8 @@ class Events {
 
     this.payloadBytes = 0;
     this.flushIntervalId = null;
-    this.retryAttempts = 0;
+    this.retryAttempts = new WeakMap(); // event => failed send attempts
+    this.tagRetryAttempts = new Map(); // signed tag => failed send attempts
     this.retryTimeout = null;
     this.sequence = new SequenceCounter(recordingId);
   }
@@ -330,7 +331,7 @@ class Events {
       body,
     }).then((response) => {
       if (response.ok) {
-        this.retryAttempts = 0;
+        batch.tags.forEach((tag) => this.tagRetryAttempts.delete(tag));
       } else if (NON_RETRYABLE_STATUSES.includes(response.status)) {
         console.error(`spectator_sport: dropped ${batch.events.length} events, server responded ${response.status}`);
       } else {
@@ -344,19 +345,26 @@ class Events {
   // Puts a failed batch back at the front of the buffer and schedules a retry with backoff.
   // Event order within a batch doesn't matter to the server, which orders by timestamp.
   #requeue(batch, reason) {
-    this.retryAttempts += 1;
-    if (this.retryAttempts > MAX_RETRY_ATTEMPTS) {
+    // Attempts are counted per event, so batches that fail together don't use up each other's retries.
+    const attempts = Math.max(
+      ...batch.events.map((event) => this.retryAttempts.get(event) || 0),
+      ...batch.tags.map((tag) => this.tagRetryAttempts.get(tag) || 0),
+      0
+    ) + 1;
+    if (attempts > MAX_RETRY_ATTEMPTS) {
       console.error(`spectator_sport: dropped ${batch.events.length} events after ${MAX_RETRY_ATTEMPTS} retries`, reason);
-      this.retryAttempts = 0;
+      batch.tags.forEach((tag) => this.tagRetryAttempts.delete(tag));
       return;
     }
 
+    batch.events.forEach((event) => this.retryAttempts.set(event, attempts));
+    batch.tags.forEach((tag) => this.tagRetryAttempts.set(tag, attempts));
     this.events = [...batch.events, ...this.events];
     batch.tags.forEach((tag) => this.tags.add(tag));
     this.payloadBytes += lengthInUtf8Bytes(JSON.stringify(batch));
 
     if (!this.retryTimeout) {
-      const delay = Math.min(RETRY_BASE_DELAY_MS * 2 ** (this.retryAttempts - 1), RETRY_MAX_DELAY_MS);
+      const delay = Math.min(RETRY_BASE_DELAY_MS * 2 ** (attempts - 1), RETRY_MAX_DELAY_MS);
       this.retryTimeout = setTimeout(() => {
         this.retryTimeout = null;
         this.transmit(false);

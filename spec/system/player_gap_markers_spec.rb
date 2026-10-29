@@ -30,6 +30,8 @@ RSpec.describe "Player gap markers", type: :system, js: true do
         spectatorSportSeq: 2
       },
       { type: 3, data: { source: 0, texts: [], attributes: [], removes: [], adds: [] }, timestamp: base_time + 5_000, spectatorSportSeq: 3 },
+      # Stored twice, as when a retry follows a lost response; must not hide the 3..7 gap or add another.
+      { type: 3, data: { source: 0, texts: [], attributes: [], removes: [], adds: [] }, timestamp: base_time + 5_000, spectatorSportSeq: 3 },
       { type: 3, data: { source: 0, texts: [], attributes: [], removes: [], adds: [] }, timestamp: base_time + 10_000, spectatorSportSeq: 7 }
     ].each do |event_data|
       SpectatorSport::Event.create!(recording: recording, event_data: event_data, created_at: Time.at(event_data[:timestamp] / 1000.0))
