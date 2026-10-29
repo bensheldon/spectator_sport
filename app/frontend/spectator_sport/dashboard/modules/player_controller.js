@@ -2,6 +2,11 @@
 import { Controller } from "stimulus"
 import { Player } from  'rrweb-player';
 
+// The recorder numbers each event (spectatorSportSeq); a jump in the numbers means events
+// were lost in transit. Gaps are shown as custom-event markers on the player's timeline.
+const GAP_TAG = "spectator_sport:gap";
+const GAP_COLOR = "#dc3545";
+
 export default class extends Controller {
   static values = {
     events: { type: Array, default: [] },
@@ -12,10 +17,13 @@ export default class extends Controller {
   connect() {
     if (this.eventsValue.length === 0) return;
 
+    this.lastSeq = null;
+
     this.player = new Player({
       target: this.playerTarget,
       props: {
-        events: this.eventsValue,
+        events: this.#withGapMarkers(this.eventsValue),
+        tags: { [GAP_TAG]: GAP_COLOR },
         liveMode: true,
         skipInactive: false,
         speedOption: [1, 2, 4, 8, 16],
@@ -51,11 +59,36 @@ export default class extends Controller {
     if (!this.player) return;
 
     const events = JSON.parse(element.dataset.events);
-    events.forEach(event => {
+    this.#withGapMarkers(events).forEach(event => {
       this.player.addEvent(event);
     });
 
     element.remove();
+  }
+
+  // Returns the events with a marker inserted before each event that follows missing ones.
+  // Events from older recorders have no sequence number and are left alone.
+  #withGapMarkers(events) {
+    const result = [];
+    const sequenced = events
+      .filter(event => Number.isInteger(event.spectatorSportSeq))
+      .sort((a, b) => a.spectatorSportSeq - b.spectatorSportSeq);
+    const markers = new Map();
+    for (const event of sequenced) {
+      if (this.lastSeq !== null && event.spectatorSportSeq > this.lastSeq + 1) {
+        markers.set(event, {
+          type: 5,
+          timestamp: event.timestamp,
+          data: { tag: GAP_TAG, payload: { missing: event.spectatorSportSeq - this.lastSeq - 1 } },
+        });
+      }
+      this.lastSeq = Math.max(this.lastSeq ?? 0, event.spectatorSportSeq);
+    }
+    for (const event of events) {
+      if (markers.has(event)) result.push(markers.get(event));
+      result.push(event);
+    }
+    return result;
   }
 
   disconnect() {
