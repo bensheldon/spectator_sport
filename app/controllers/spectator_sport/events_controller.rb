@@ -109,7 +109,12 @@ module SpectatorSport
     end
 
     def create_recording(data, events)
-      recording = Recording.find_or_create_by(secure_id: data["recordingId"])
+      recording = begin
+        Recording.find_or_create_by(secure_id: data["recordingId"])
+      rescue ActiveRecord::RecordNotUnique
+        # A concurrent request created the recording between the find and the create
+        Recording.find_by!(secure_id: data["recordingId"])
+      end
 
       # custom_tag isn't a persisted column (yet), so it's only kept around here to find the
       # label events below, not written to the database.
