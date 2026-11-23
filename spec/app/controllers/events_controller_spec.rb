@@ -26,6 +26,21 @@ describe SpectatorSport::EventsController, type: :controller do
       )
     end
 
+    it 'uses the existing recording when a concurrent request creates it first' do
+      recording = SpectatorSport::Recording.create!(secure_id: "873h0zhhw66i9f1t36rh5myu8pzwopt676v9s83z")
+      allow(SpectatorSport::Recording).to receive(:find_or_create_by).and_raise(ActiveRecord::RecordNotUnique)
+
+      post :create, params: {
+        "recordingId": recording.secure_id,
+        "events": [
+          { "type": 4, "data": { "href": "http://127.0.0.1:3000/", "width": 1512, "height": 770 }, "timestamp": 1727655888530 }
+        ]
+      }
+
+      expect(response).to have_http_status(:ok)
+      expect(SpectatorSport::Event.last).to have_attributes(recording: recording)
+    end
+
     it 'strips null bytes that Postgres jsonb cannot store' do
       payload = {
         "sessionId" => "fb1x1aji7p5nljgnydya9kid7vncrzw48ir7d70h",
